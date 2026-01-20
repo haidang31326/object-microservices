@@ -3,6 +3,8 @@ package com.dang.microservices.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Data
 @Getter
@@ -24,4 +26,7 @@ public class Event {
     @ManyToOne
     @JoinColumn(name = "venue_id")
     private Venue venue;
+
+    @Column(name = "price")
+    private BigDecimal price;
 }
