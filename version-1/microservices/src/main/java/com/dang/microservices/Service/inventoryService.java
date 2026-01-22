@@ -29,7 +29,8 @@ public class inventoryService {
         return events.stream().map(event -> EventInventoryResponse.builder()
                 .event(event.getName())
                 .capacity(event.getLeftCapacity())
-                .venue(event.getVenue().getName())
+                .venue(event.getVenue())
+               /* .price(event.getPrice())*/
                 .build()).collect(Collectors.toList());
     }
 
@@ -49,8 +50,8 @@ public class inventoryService {
         return EventInventoryResponse.builder()
                 .event(event.getName())
                 .capacity(event.getLeftCapacity())
-                .venue(event.getVenue().getName())
-                .price(event.getPrice())
+                .venue(event.getVenue())
+                /*.price(event.getPrice())*/
                 .eventId(event.getId())
                 .build();
     }
