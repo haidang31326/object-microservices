@@ -16,10 +16,6 @@ public class InventoryController {
     public InventoryController(final inventoryService inventoryService) {
         this.inventoryService = inventoryService;
     }
-    @GetMapping
-    public List<EventInventoryResponse> inventoryGetAllEvents() {
-        return inventoryService.getAllEvents();
-    }
     @GetMapping("/inventory/venue/{venueId}")
     public  @ResponseBody VenueInventoryResponse inventoryGetVenueById(@PathVariable("venueId") Long venueId) {
         return inventoryService.getVenueById(venueId);
@@ -28,4 +24,11 @@ public class InventoryController {
     public List<EventInventoryResponse> inventoryGetEventById() {
         return inventoryService.getAllEvents();
     }
+    @GetMapping("/inventory/event/{eventId}")
+    public EventInventoryResponse inventoryGetEventById(@PathVariable("eventId") Long eventId) {
+
+        return inventoryService.getEventInventory(eventId);
+    }
+
+
 }
