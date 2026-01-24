@@ -8,11 +8,11 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class InventoryServiceClient {
 
-    @Value("${inventory.service.url")
-    private String inventoryServiceUrl = "http://inventory-service/api/v1/inventory/";
+    @Value("${inventory.service.url}")
+    private String inventoryServiceUrl;
 
     public InventoryResponse getInventory(Long eventId) {
         final RestTemplate restTemplate = new RestTemplate();
-        return restTemplate.getForObject(inventoryServiceUrl + "event/" + eventId, InventoryResponse.class);
+        return restTemplate.getForObject(inventoryServiceUrl + "/event/" + eventId, InventoryResponse.class);
     }
 }

@@ -5,6 +5,7 @@ import com.example.bookingservice.entity.Customer;
 import com.example.bookingservice.repository.CustomerRepository;
 import com.example.bookingservice.request.BookingRequest;
 import com.example.bookingservice.response.BookingResponse;
+import com.example.bookingservice.response.InventoryResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,7 +26,8 @@ public class BookingService {
         if(customer == null){
             throw new RuntimeException("User not found");
         }
-
+        final InventoryResponse inventoryResponse = inventoryServiceClient.getInventory(bookingRequest.getEventId());
+        System.out.println("Inventory Response: " + inventoryResponse);
         // Dummy response for illustration
         return BookingResponse.builder()
                 .build();

@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/ap1/v1")
+@RequestMapping("/api/v1")
 public class BookingController {
     private BookingService bookingService;
 
@@ -19,9 +19,8 @@ public class BookingController {
         this.bookingService = bookingService;
     }
 
-    @PostMapping("/bookings")
+    @PostMapping(consumes = "application/json", produces = "application/json", path = "/booking")
     public BookingResponse createBooking(@RequestBody BookingRequest bookingRequest) {
-
         return bookingService.createBooking(bookingRequest);
     }
 }
