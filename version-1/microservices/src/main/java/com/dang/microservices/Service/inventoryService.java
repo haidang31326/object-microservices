@@ -58,7 +58,6 @@ public class inventoryService {
     }
     public void updateEventCapacity(Long eventId, Long ticketsBooked) {
         final Event event = eventRepository.findById(eventId).orElseThrow();
-
         event.setLeftCapacity(event.getLeftCapacity() - ticketsBooked);
         eventRepository.saveAndFlush(event);
         log.info("Updated event capacity for eventId {}: new capacity is {}", eventId, event.getLeftCapacity());

@@ -13,7 +13,7 @@ public class InventoryServiceClient {
 
     public ResponseEntity<Void> updateEventCapacity(Long eventId, Long ticketCount) {
         RestTemplate restTemplate = new RestTemplate();
-        restTemplate.put(inventoryServiceUrl + "/inventory/event/" + eventId + "/capacity/" + ticketCount, null);
+        restTemplate.put(inventoryServiceUrl + "/event/" + eventId + "/capacity/" + ticketCount, null);
         return ResponseEntity.ok().build();
     }
 }
