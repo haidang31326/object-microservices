@@ -31,3 +31,16 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Bỏ qua dữ liệu Docker
+**/volume-data/
+**/mysql_data/
+**/mysql_keycloak_data/
+
+# Bỏ qua các file biên dịch của Java
+**/target/
+**/*.class
+
+# Bỏ qua cấu hình IDE
+**/.idea/
+**/*.iml
