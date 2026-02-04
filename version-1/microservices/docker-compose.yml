@@ -112,7 +112,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=password
 
   booking-service:
-    build: ./booking-service
+    build: ../booking-service
     container_name: booking-service
     ports:
       - "8081:8081"
@@ -129,7 +129,7 @@ services:
       - INVENTORY_SERVICE_URL=http://inventory-service:8080/api/v1
 
   order-service:
-    build: ./order-service
+    build: ../order-service
     container_name: order-service
     ports:
       - "8082:8082"
@@ -144,7 +144,7 @@ services:
       - INVENTORY_SERVICE_URL=http://inventory-service:8080/api/v1
 
   api-gateway:
-    build: ./api-gateway
+    build: ../api-gateway
     container_name: api-gateway
     ports:
       - "8090:8090"
