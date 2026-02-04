@@ -1,4 +1,6 @@
+version: '3'
 services:
+  # --- HẠ TẦNG (INFRASTRUCTURE) ---
   mysql:
     image: mysql:8.3.0
     container_name: mysql
@@ -11,6 +13,7 @@ services:
     volumes:
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
       - db-data:/var/lib/mysql
+      # Bỏ dòng log nếu gây lỗi permission, hoặc giữ nguyên nếu chạy tốt
       - db-data:/var/log/mysql
 
   zookeeper:
@@ -80,7 +83,7 @@ services:
     command: [ "start-dev", "--import-realm" ]
     environment:
       DB_VENDOR: MYSQL
-      DB_ADDR: mysql
+      DB_ADDR: keycloak-mysql # Sửa lại để trỏ đúng vào container keycloak-db
       DB_DATABASE: keycloak
       DB_USER: keycloak
       DB_PASSWORD: password
@@ -92,6 +95,70 @@ services:
       - ./docker/keycloak/realms/:/opt/keycloak/data/import/
     depends_on:
       - keycloak-db
+
+  # --- CÁC MICROSERVICES (JAVA APPS) ---
+
+  inventory-service:
+    # Giả sử file docker-compose này nằm trong thư mục inventory-service
+    build: ./inventory-service
+    container_name: inventory-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ticketing
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=password
+
+  booking-service:
+    build: ./booking-service
+    container_name: booking-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysql
+      - kafka-broker
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ticketing
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=password
+      # Kết nối Kafka qua cổng nội bộ 29092
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker:29092
+      # Gọi Inventory qua tên container
+      - INVENTORY_SERVICE_URL=http://inventory-service:8080/api/v1
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - mysql
+      - kafka-broker
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ticketing
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker:29092
+      - INVENTORY_SERVICE_URL=http://inventory-service:8080/api/v1
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8090:8090"
+    depends_on:
+      - inventory-service
+      - booking-service
+      - keycloak
+    environment:
+      # Keycloak nội bộ chạy cổng 8080 inside container
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ticketing-security-realm
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ticketing-security-realm/protocol/openid-connect/certs
+      # Cấu hình Route Docs (nếu em có làm phần Swagger)
+      - DOCS_INVENTORY_SERVICE_URL=http://inventory-service:8080
+      - DOCS_BOOKING_SERVICE_URL=http://booking-service:8081
 
 volumes:
   db-data:
