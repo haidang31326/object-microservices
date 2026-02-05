@@ -1,5 +1,5 @@
 # 1. Chọn môi trường chạy Java 21 (giống trong video)
-FROM openjdk:21-jdk-slim
+FROM docker.io/library/openjdk:21-jdk-slim
 
 # 2. Copy file .jar đã build vào trong container
 # Lưu ý: Em phải chạy 'mvn clean package' trước để có file trong thư mục target/
