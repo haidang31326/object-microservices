@@ -99,14 +99,15 @@ services:
   # --- CÁC MICROSERVICES (JAVA APPS) ---
 
   inventory-service:
-    # Giả sử file docker-compose này nằm trong thư mục inventory-service
-    build: ./inventory-service
+    # SỬA Ở ĐÂY: Dùng dấu chấm (.) nghĩa là "lấy code ngay tại thư mục này"
+    build: .
     container_name: inventory-service
     ports:
       - "8080:8080"
     depends_on:
       - mysql
     environment:
+      # Cấu hình kết nối DB (User/Pass giống hệt file application.properties nhưng viết hoa)
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ticketing
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=password
