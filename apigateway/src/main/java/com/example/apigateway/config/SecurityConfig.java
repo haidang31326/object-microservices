@@ -8,18 +8,28 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+
 @Configuration
 public class SecurityConfig {
+
     @Value("${keycloak.auth.jwk-set-uri}")
     private String jwkSetUri;
+
+    @Value("${security.excluded.urls}")
+    private String[] excludedUrls;
+
     @Bean
-    public SecurityFilterChain  springSecurityFilterChain(HttpSecurity http) throws Exception {
-        return http.authorizeHttpRequests(authorizeRequests ->
-                        authorizeRequests.anyRequest().authenticated())
+    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+        return httpSecurity.authorizeHttpRequests(authorizeRequests ->
+                        authorizeRequests
+                                .requestMatchers(excludedUrls)
+                                .permitAll()
+                                .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth ->
                         oauth.jwt(Customizer.withDefaults()))
                 .build();
     }
+
     @Bean
     public JwtDecoder jwtDecoder() {
         return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();

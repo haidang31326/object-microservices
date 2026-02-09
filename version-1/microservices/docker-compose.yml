@@ -107,10 +107,11 @@ services:
     depends_on:
       - mysql
     environment:
-      # Cấu hình kết nối DB (User/Pass giống hệt file application.properties nhưng viết hoa)
+      # Cấu hình kết nối DB (User/Pass giống hệt file application-vps.properties nhưng viết hoa)
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ticketing
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_PROFILES_ACTIVE=vps
 
   booking-service:
     build: ../../bookingservice
@@ -124,6 +125,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ticketing
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_PROFILES_ACTIVE=vps
       # Kết nối Kafka qua cổng nội bộ 29092
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker:29092
       # Gọi Inventory qua tên container
@@ -143,6 +145,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=password
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker:29092
       - INVENTORY_SERVICE_URL=http://inventory-service:8080/api/v1
+      - SPRING_PROFILES_ACTIVE=vps
 
   api-gateway:
     build: ../../apigateway
@@ -160,6 +163,7 @@ services:
       # Cấu hình Route Docs (nếu em có làm phần Swagger)
       - DOCS_INVENTORY_SERVICE_URL=http://inventory-service:8080
       - DOCS_BOOKING_SERVICE_URL=http://booking-service:8081
+      - SPRING_PROFILES_ACTIVE=vps
 
 volumes:
   db-data:

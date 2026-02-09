@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
     @Bean
-    public OpenAPI openApiConfig() {
+    public OpenAPI openapiconfig() {
         return new OpenAPI()
                 .info(new io.swagger.v3.oas.models.info.Info()
                         .title("Booking Service API")

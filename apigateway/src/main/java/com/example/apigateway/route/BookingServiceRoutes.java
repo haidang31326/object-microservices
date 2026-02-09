@@ -1,6 +1,5 @@
 package com.example.apigateway.route;
 
-import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import org.springframework.cloud.gateway.server.mvc.filter.CircuitBreakerFilterFunctions;
 import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions;
 import org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions;
@@ -17,23 +16,26 @@ import static org.springframework.cloud.gateway.server.mvc.filter.FilterFunction
 
 @Configuration
 public class BookingServiceRoutes {
+
     @Bean
     public RouterFunction<ServerResponse> bookingRoutes() {
         return GatewayRouterFunctions.route("booking-service")
-                .route(RequestPredicates.POST("api/v1/booking"),
-                    HandlerFunctions.http("http://localhost:8081/api/v1/booking"))
-                .filter(CircuitBreakerFilterFunctions.circuitBreaker("booking-service",
-                        URI.create("foward:/fallbackRoute")))
+                .route(RequestPredicates.POST("/api/v1/booking"),
+                        HandlerFunctions.http("http://localhost:8081/api/v1/booking"))
+                .filter(CircuitBreakerFilterFunctions.circuitBreaker("bookingServiceCircuitBreaker",
+                        URI.create("forward:/fallbackRoute")))
                 .build();
     }
 
     @Bean
     public RouterFunction<ServerResponse> fallbackRoute() {
-        return GatewayRouterFunctions.route("fallback-route")
+        return GatewayRouterFunctions.route("fallbackRoute")
                 .POST("/fallbackRoute",
-                        request -> ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE).body("Booking Service is currently unavailable. Please try again later."))
-        .build();
+                        request -> ServerResponse.status(HttpStatus.SERVICE_UNAVAILABLE)
+                                .body("Booking service is down"))
+                .build();
     }
+
     @Bean
     public RouterFunction<ServerResponse> bookingServiceApiDocs() {
         return GatewayRouterFunctions.route("booking-service-api-docs")
@@ -41,6 +43,5 @@ public class BookingServiceRoutes {
                         HandlerFunctions.http("http://localhost:8081"))
                 .filter(setPath("/v3/api-docs"))
                 .build();
-                    }
-
+    }
 }
