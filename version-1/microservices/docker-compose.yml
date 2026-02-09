@@ -13,8 +13,7 @@ services:
     volumes:
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
       - db-data:/var/lib/mysql
-      # Bỏ dòng log nếu gây lỗi permission, hoặc giữ nguyên nếu chạy tốt
-      - db-data:/var/log/mysql
+      # Đã xóa dòng log để tránh lỗi permission
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -38,8 +37,11 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # LƯU Ý: Nếu em muốn kết nối từ máy nhà tới Kafka trên VPS, thay 'localhost' bằng IP VPS
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # --- QUAN TRỌNG: ÉP RAM ĐỂ KHÔNG BỊ SẬP VPS ---
+      KAFKA_HEAP_OPTS: "-Xmx400M -Xms400M"
 
   kafka-ui:
     container_name: kafka-ui
@@ -81,25 +83,27 @@ services:
     container_name: keycloak
     image: quay.io/keycloak/keycloak:24.0.1
     command: [ "start-dev", "--import-realm" ]
-    environment:
-      DB_VENDOR: MYSQL
-      DB_ADDR: keycloak-mysql # Sửa lại để trỏ đúng vào container keycloak-db
-      DB_DATABASE: keycloak
-      DB_USER: keycloak
-      DB_PASSWORD: password
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
     ports:
       - "8091:8080"
+    environment:
+      # --- CẤU HÌNH MỚI CHO KEYCLOAK 24 (BẮT BUỘC) ---
+      KC_DB: mysql
+      KC_DB_URL: jdbc:mysql://keycloak-mysql:3306/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      # Thêm dòng này để fix lỗi truy cập qua HTTP (không có HTTPS) trên VPS
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
     volumes:
       - ./docker/keycloak/realms/:/opt/keycloak/data/import/
     depends_on:
       - keycloak-db
-
   # --- CÁC MICROSERVICES (JAVA APPS) ---
 
   inventory-service:
-    # SỬA Ở ĐÂY: Dùng dấu chấm (.) nghĩa là "lấy code ngay tại thư mục này"
+    # Lưu ý: Đảm bảo file Dockerfile nằm ngay cạnh file docker-compose này
     build: .
     container_name: inventory-service
     ports:
@@ -107,63 +111,74 @@ services:
     depends_on:
       - mysql
     environment:
-      # Cấu hình kết nối DB (User/Pass giống hệt file application-vps.properties nhưng viết hoa)
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ticketing
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=password
       - SPRING_PROFILES_ACTIVE=vps
+      # Tắt log rác
+      - LOGGING_LEVEL_ROOT=INFO
+      - LOGGING_LEVEL_ORG_HIBERNATE=ERROR
 
   booking-service:
-    build: ../../bookingservice
-    container_name: booking-service
-    ports:
-      - "8081:8081"
-    depends_on:
-      - mysql
-      - kafka-broker
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ticketing
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=password
-      - SPRING_PROFILES_ACTIVE=vps
-      # Kết nối Kafka qua cổng nội bộ 29092
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker:29092
-      # Gọi Inventory qua tên container
-      - INVENTORY_SERVICE_URL=http://inventory-service:8080/api/v1
+      # ⚠️ KIỂM TRA LẠI ĐƯỜNG DẪN NÀY TRÊN MÁY EM
+      # Nếu folder bookingservice nằm cùng cấp với inventoryservice thì chỉ cần ../bookingservice
+      build: ../../bookingservice
+      container_name: booking-service
+      ports:
+        - "8081:8081"
+      depends_on:
+        - mysql
+        - kafka-broker
+      environment:
+        - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ticketing
+        - SPRING_DATASOURCE_USERNAME=root
+        - SPRING_DATASOURCE_PASSWORD=password
+        - SPRING_PROFILES_ACTIVE=vps
+        - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker:29092
+        - INVENTORY_SERVICE_URL=http://inventory-service:8080/api/v1
+        # Tắt log rác
+        - LOGGING_LEVEL_ROOT=INFO
+        - LOGGING_LEVEL_ORG_APACHE_KAFKA=WARN
 
   order-service:
-    build: ../../orderservice
-    container_name: order-service
-    ports:
-      - "8082:8082"
-    depends_on:
-      - mysql
-      - kafka-broker
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ticketing
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=password
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker:29092
-      - INVENTORY_SERVICE_URL=http://inventory-service:8080/api/v1
-      - SPRING_PROFILES_ACTIVE=vps
+      # ⚠️ KIỂM TRA LẠI ĐƯỜNG DẪN
+      build: ../../orderservice
+      container_name: order-service
+      ports:
+        - "8082:8082"
+      depends_on:
+        - mysql
+        - kafka-broker
+      environment:
+        - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/ticketing
+        - SPRING_DATASOURCE_USERNAME=root
+        - SPRING_DATASOURCE_PASSWORD=password
+        - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka-broker:29092
+        - INVENTORY_SERVICE_URL=http://inventory-service:8080/api/v1
+        - SPRING_PROFILES_ACTIVE=vps
+        # Tắt log rác
+        - LOGGING_LEVEL_ROOT=INFO
 
   api-gateway:
-    build: ../../apigateway
-    container_name: api-gateway
-    ports:
-      - "8090:8090"
-    depends_on:
-      - inventory-service
-      - booking-service
-      - keycloak
-    environment:
-      # Keycloak nội bộ chạy cổng 8080 inside container
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ticketing-security-realm
-      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ticketing-security-realm/protocol/openid-connect/certs
-      # Cấu hình Route Docs (nếu em có làm phần Swagger)
-      - DOCS_INVENTORY_SERVICE_URL=http://inventory-service:8080
-      - DOCS_BOOKING_SERVICE_URL=http://booking-service:8081
-      - SPRING_PROFILES_ACTIVE=vps
+      # ⚠️ KIỂM TRA LẠI ĐƯỜNG DẪN
+      build: ../../apigateway
+      container_name: api-gateway
+      ports:
+        - "8090:8090"
+      depends_on:
+        - inventory-service
+        - booking-service
+        - keycloak
+      environment:
+        - SPRING_PROFILES_ACTIVE=vps
+        # --- CẤU HÌNH SECURITY ---
+        # Dùng JWK_SET_URI để lấy Public Key từ nội bộ Docker (Nhanh & Ổn định)
+        - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://keycloak:8080/realms/ticketing-security-realm/protocol/openid-connect/certs
+        # ⚠️ QUAN TRỌNG: Nếu bị lỗi 401 Unauthorized do Issuer không khớp, hãy tạm comment dòng dưới lại
+        # - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/ticketing-security-realm
 
+        # Route Docs
+        - DOCS_INVENTORY_SERVICE_URL=http://inventory-service:8080
+        - DOCS_BOOKING_SERVICE_URL=http://booking-service:8081
 volumes:
   db-data:
