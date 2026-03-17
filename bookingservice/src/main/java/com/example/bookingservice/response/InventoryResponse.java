@@ -16,4 +16,5 @@ public class InventoryResponse {
     private Long capacity;
     private VenueResponse venue;
     private BigDecimal ticketPrice;
+    private Long LeftCapacity;
 }
