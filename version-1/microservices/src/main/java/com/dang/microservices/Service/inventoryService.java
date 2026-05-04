@@ -2,8 +2,11 @@ package com.dang.microservices.Service;
 
 import com.dang.microservices.Repository.EventRepository;
 import com.dang.microservices.Repository.VenueRepository;
+import com.dang.microservices.controller.InventoryController;
 import com.dang.microservices.entity.Event;
 import com.dang.microservices.entity.Venue;
+import com.dang.microservices.exception.EventNotFoundException;
+import com.dang.microservices.exception.VenueNotFoundException;
 import com.dang.microservices.reponse.EventInventoryResponse;
 import com.dang.microservices.reponse.VenueInventoryResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +34,6 @@ public class inventoryService {
                 .event(event.getName())
                 .capacity(event.getLeftCapacity())
                 .venue(event.getVenue())
-               /* .price(event.getPrice())*/
                 .build()).collect(Collectors.toList());
     }
 
@@ -46,8 +48,7 @@ public class inventoryService {
     }
     public EventInventoryResponse getEventInventory(Long eventId) {
 
-        final Event event = eventRepository.findById(eventId).orElseThrow();
-
+        final Event event = eventRepository.findById(eventId).orElseThrow(() ->  new EventNotFoundException("Event with id " + eventId + " not found"));
         return EventInventoryResponse.builder()
                 .event(event.getName())
                 .capacity(event.getLeftCapacity())
@@ -57,9 +58,62 @@ public class inventoryService {
                 .build();
     }
     public void updateEventCapacity(Long eventId, Long ticketsBooked) {
-        final Event event = eventRepository.findById(eventId).orElseThrow();
+        final Event event = eventRepository.findById(eventId).orElseThrow(() -> new EventNotFoundException("Event with id " + eventId + " not found"));
         event.setLeftCapacity(event.getLeftCapacity() - ticketsBooked);
         eventRepository.saveAndFlush(event);
         log.info("Updated event capacity for eventId {}: new capacity is {}", eventId, event.getLeftCapacity());
+    }
+    public VenueInventoryResponse createVenue(Venue venue) {
+        final Venue savedVenue = venueRepository.save(venue);
+        return VenueInventoryResponse.builder()
+                .venueId(savedVenue.getId())
+                .venueName(savedVenue.getName())
+                .totalCapacity(savedVenue.getTotalCapacity())
+                .build();
+
+    }
+    public EventInventoryResponse createEvent(Event event, Long venueId ) {
+        Venue venue = venueRepository.findById(venueId)
+            .orElseThrow(() -> new VenueNotFoundException("Venue with id " + venueId + " not found"));
+        event.setVenue(venue);
+        final Event savedEvent = eventRepository.save(event);
+        return EventInventoryResponse.builder()
+                .eventId(savedEvent.getId())
+                .event(savedEvent.getName())
+                .capacity(savedEvent.getLeftCapacity())
+                .venue(savedEvent.getVenue())
+                .ticketPrice(savedEvent.getPrice())
+                .build();
+    }
+
+    public EventInventoryResponse updateEvent(Long eventId, Event updatedEvent) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new EventNotFoundException("Event with id " + eventId + " not found"));
+        if(updatedEvent.getName() != null) event.setName(updatedEvent.getName());
+        if(updatedEvent.getPrice() != null) event.setPrice(updatedEvent.getPrice());
+        if(updatedEvent.getTotalCapacity() != null) event.setTotalCapacity(updatedEvent.getTotalCapacity());
+        if(updatedEvent.getLeftCapacity() != null) event.setLeftCapacity(updatedEvent.getLeftCapacity());
+        Event savedEvent = eventRepository.save(event);
+        return EventInventoryResponse.builder()
+                .eventId(savedEvent.getId())
+                .event(savedEvent.getName())
+                .capacity(savedEvent.getLeftCapacity())
+                .venue(savedEvent.getVenue())
+                .ticketPrice(savedEvent.getPrice())
+                .build();
+    }
+
+    public void deleteEvent(Long eventId) {
+        if (!eventRepository.existsById(eventId)) {
+            throw new EventNotFoundException("Event with id " + eventId + " not found");
+        }
+        eventRepository.deleteById(eventId);
+    }
+
+    public void restoreEventCapacity(Long eventId, Long ticketsCancelled) {
+        Event event = eventRepository.findById(eventId).orElseThrow(() -> new EventNotFoundException("Event with id " + eventId + " not found"));
+        event.setLeftCapacity(event.getLeftCapacity() + ticketsCancelled);
+        eventRepository.saveAndFlush(event);
+        log.info("Restored event capacity for eventId {}: new capacity is {}", eventId, event.getLeftCapacity());
     }
 }

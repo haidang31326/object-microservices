@@ -6,15 +6,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class InventoryResponse {
+public class BookingEvent {
+    private Long userId;
     private Long eventId;
-    private String event;
-    private Long capacity;
-    private VenueResponse venue;
-    private BigDecimal ticketPrice;
-    private Long leftCapacity;
+    private Long ticketCount;
+    private BigDecimal totalPrice;
 }

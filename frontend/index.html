@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventTick | Seamless Bookings</title>
+    <meta name="description" content="A minimalist, premium event booking platform.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-elements">
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+    </div>
+
+    <main class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <div>
+                    <h1>Event<span>Tick</span></h1>
+                    <p>Seamless ticketing experience</p>
+                </div>
+                <div class="user-auth" id="user-auth-section">
+                    <button id="btn-login" class="btn-secondary">Login</button>
+                    <div id="user-info" class="hidden">
+                        <span id="user-name"></span>
+                        <button id="btn-logout" class="btn-secondary">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="dashboard">
+            <!-- Nav Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" data-target="book-tab">Book Ticket</button>
+                <button class="tab-btn" data-target="history-tab">My Orders</button>
+                <button class="tab-btn" id="admin-tab-btn" data-target="admin-tab" style="display: none;">Admin</button>
+            </div>
+
+            <div id="book-tab" class="tab-content active">
+            <!-- Event Search Section -->
+            <div class="glass-card" id="event-search-card">
+                <h2>Find Event</h2>
+                <div class="form-group">
+                    <label for="event-id-input">Event ID</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="event-id-input" placeholder="e.g. 1" min="1">
+                        <button id="btn-search-event" class="btn-primary">Search</button>
+                    </div>
+                </div>
+                
+                <div id="event-details" class="hidden result-box">
+                    <div class="detail-row">
+                        <span class="detail-label">Event:</span>
+                        <span class="detail-value" id="res-event-name">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Capacity:</span>
+                        <span class="detail-value" id="res-event-capacity">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Left:</span>
+                        <span class="detail-value highlight-text" id="res-event-left">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Price:</span>
+                        <span class="detail-value" id="res-event-price">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booking Section -->
+            <div class="glass-card" id="booking-card">
+                <h2>Book Tickets</h2>
+                <form id="booking-form">
+                    <div class="form-group">
+                        <label for="user-id">User ID</label>
+                        <input type="number" id="user-id" placeholder="Enter your ID" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="book-event-id">Event ID</label>
+                        <input type="number" id="book-event-id" placeholder="Enter event ID" required min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="ticket-count">Number of Tickets</label>
+                        <input type="number" id="ticket-count" placeholder="1" required min="1" max="10">
+                    </div>
+                    
+                    <button type="submit" class="btn-primary full-width" id="btn-book">Confirm Booking</button>
+                </form>
+                <div id="booking-message" class="message hidden"></div>
+            </div>
+            </div> <!-- End Book Tab -->
+
+            <!-- Order History Tab -->
+            <div id="history-tab" class="tab-content hidden">
+                <div class="glass-card">
+                    <h2>My Orders</h2>
+                    <div class="form-group">
+                        <label for="history-user-id">User ID</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="history-user-id" placeholder="Enter your User ID to fetch orders">
+                            <button id="btn-fetch-orders" class="btn-primary">Fetch</button>
+                        </div>
+                    </div>
+                    <div id="orders-list" class="orders-list">
+                        <!-- Order items will be appended here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Tab -->
+            <div id="admin-tab" class="tab-content hidden">
+                <div class="glass-card">
+                    <h2>Manage Events</h2>
+                    <div class="form-group">
+                        <label>Action</label>
+                        <select id="admin-action-select">
+                            <option value="create">Create New Event</option>
+                            <option value="update">Update Existing Event</option>
+                            <option value="delete">Delete Event</option>
+                        </select>
+                    </div>
+
+                    <form id="admin-form">
+                        <div class="form-group" id="admin-event-id-group" style="display: none;">
+                            <label>Event ID</label>
+                            <input type="number" id="admin-event-id">
+                        </div>
+                        <div class="form-group" id="admin-venue-id-group">
+                            <label>Venue ID</label>
+                            <input type="number" id="admin-venue-id" required>
+                        </div>
+                        <div class="form-group name-group">
+                            <label>Event Name</label>
+                            <input type="text" id="admin-event-name" required>
+                        </div>
+                        <div class="form-group capacity-group">
+                            <label>Total Capacity / Left Capacity</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="admin-event-total-cap" placeholder="Total" required>
+                                <input type="number" id="admin-event-left-cap" placeholder="Left" required>
+                            </div>
+                        </div>
+                        <div class="form-group price-group">
+                            <label>Price</label>
+                            <input type="number" step="0.01" id="admin-event-price" required>
+                        </div>
+                        
+                        <button type="submit" class="btn-primary full-width" id="btn-admin-submit">Submit</button>
+                    </form>
+                    <div id="admin-message" class="message hidden"></div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/keycloak-js@24.0.1/dist/keycloak.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
