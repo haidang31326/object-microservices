@@ -4,6 +4,7 @@ import com.example.bookingservice.request.BookingRequest;
 import com.example.bookingservice.response.BookingResponse;
 import com.example.bookingservice.service.BookingService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,7 +21,7 @@ public class BookingController {
     }
 
     @PostMapping(consumes = "application/json", produces = "application/json", path = "/booking")
-    public BookingResponse createBooking(@RequestBody BookingRequest bookingRequest) {
-        return bookingService.createBooking(bookingRequest);
+    public ResponseEntity<BookingResponse> createBooking(@RequestBody BookingRequest bookingRequest) {
+        return ResponseEntity.ok(bookingService.createBooking(bookingRequest));
     }
 }

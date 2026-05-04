@@ -1,6 +1,7 @@
 package com.example.orderservice.service;
 
 import com.example.bookingservice.event.BookingEvent;
+import com.example.orderservice.Response.OrderResponse;
 import com.example.orderservice.client.InventoryServiceClient;
 import com.example.orderservice.entity.Order;
 import com.example.orderservice.repository.OrderRepository;
@@ -8,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+
 @Slf4j
 @Service
 public class OrderService {
@@ -39,5 +43,27 @@ public class OrderService {
                 .ticketCount(bookingevent.getTicketCount())
                 .totalPrice(bookingevent.getTotalPrice())
                 .build();
+    }
+    public List<OrderResponse> getAllOrder(Long CustomerID) {
+        List<Order> orderR = orderRepository.findAllByCustomerId(CustomerID);
+        return orderR.stream().map(order ->  OrderResponse.builder()
+                .id(order.getId())
+                .customerId(order.getCustomerId())
+                .eventId(order.getEventId())
+                .ticketCount(order.getTicketCount())
+                .totalPrice(order.getTotalPrice())
+                .placedAt(order.getPlacedAt())
+                .build()).toList(
+        );
+    }
+
+    public void cancelOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        Long eventId = order.getEventId();
+        Long ticketCount = order.getTicketCount();
+        
+        orderRepository.delete(order);
+        inventoryServiceClient.restoreEventCapacity(eventId, ticketCount);
+        log.info("Canceled order {} and restored {} tickets for eventId {}", orderId, ticketCount, eventId);
     }
 }

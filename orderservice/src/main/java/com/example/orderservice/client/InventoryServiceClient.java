@@ -16,4 +16,10 @@ public class InventoryServiceClient {
         restTemplate.put(inventoryServiceUrl + "/event/" + eventId + "/capacity/" + ticketCount, null);
         return ResponseEntity.ok().build();
     }
+
+    public ResponseEntity<Void> restoreEventCapacity(Long eventId, Long ticketCount) {
+        RestTemplate restTemplate = new RestTemplate();
+        restTemplate.put(inventoryServiceUrl + "/event/" + eventId + "/restore/" + ticketCount, null);
+        return ResponseEntity.ok().build();
+    }
 }
