@@ -3,6 +3,7 @@ package com.example.apigateway.route;
 import org.springframework.cloud.gateway.server.mvc.filter.CircuitBreakerFilterFunctions;
 import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions;
 import org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -17,11 +18,14 @@ import static org.springframework.cloud.gateway.server.mvc.filter.FilterFunction
 @Configuration
 public class BookingServiceRoutes {
 
+    @Value("${services.booking.url:http://localhost:8081}")
+    private String bookingServiceUrl;
+
     @Bean
     public RouterFunction<ServerResponse> bookingRoutes() {
         return GatewayRouterFunctions.route("booking-service")
                 .route(RequestPredicates.POST("/api/v1/booking"),
-                        HandlerFunctions.http("http://localhost:8081/api/v1/booking"))
+                        HandlerFunctions.http(bookingServiceUrl + "/api/v1/booking"))
                 .filter(CircuitBreakerFilterFunctions.circuitBreaker("bookingServiceCircuitBreaker",
                         URI.create("forward:/fallbackRoute")))
                 .build();
@@ -40,7 +44,7 @@ public class BookingServiceRoutes {
     public RouterFunction<ServerResponse> bookingServiceApiDocs() {
         return GatewayRouterFunctions.route("booking-service-api-docs")
                 .route(RequestPredicates.path("/docs/bookingservice/v3/api-docs"),
-                        HandlerFunctions.http("http://localhost:8081"))
+                        HandlerFunctions.http(bookingServiceUrl))
                 .filter(setPath("/v3/api-docs"))
                 .build();
     }

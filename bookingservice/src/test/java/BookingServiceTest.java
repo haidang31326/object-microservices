@@ -1,6 +1,6 @@
 import com.example.bookingservice.client.InventoryServiceClient;
 import com.example.bookingservice.entity.Customer;
-import com.example.bookingservice.response.BookingEvent;
+import com.example.bookingservice.event.BookingEvent;
 import com.example.bookingservice.exception.NotEnoughInventoryException;
 import com.example.bookingservice.exception.UserNotFoundException;
 import com.example.bookingservice.repository.CustomerRepository;

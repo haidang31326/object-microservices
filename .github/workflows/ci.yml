@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - "feature/**"
+      - "codex/**"
+  pull_request:
+
+jobs:
+  test:
+    name: Test services
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - apigateway
+          - bookingservice
+          - orderservice
+          - version-1/microservices
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Make Maven wrapper executable
+        run: chmod +x "${{ matrix.service }}/mvnw"
+
+      - name: Run tests
+        working-directory: ${{ matrix.service }}
+        run: ./mvnw -B test
+
+  compose:
+    name: Validate Docker Compose
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate compose config
+        working-directory: version-1/microservices
+        run: docker compose config

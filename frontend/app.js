@@ -1,15 +1,23 @@
-const API_BASE_URL = 'http://localhost:8090/api/v1';
-const ORDERS_API_URL = 'http://localhost:8090/orders';
+const CONFIG = window.EVENTTICK_CONFIG || {};
+const API_BASE_URL = CONFIG.apiBaseUrl || 'http://localhost:8090/api/v1';
+const ORDERS_API_URL = CONFIG.ordersApiUrl || 'http://localhost:8090/orders';
+const KEYCLOAK_URL = CONFIG.keycloakUrl || 'http://localhost:8091';
+const KEYCLOAK_REALM = CONFIG.keycloakRealm || 'ticketing';
+const KEYCLOAK_CLIENT_ID = CONFIG.keycloakClientId || 'ticketing-client';
+
+const DEMO_CUSTOMER_IDS = {
+    customer: '1',
+    admin: '2'
+};
 
 let keycloak = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Initialize Keycloak
     try {
         keycloak = new Keycloak({
-            url: 'http://localhost:8091',
-            realm: 'ticketing',
-            clientId: 'ticketing-client' // Assuming this is the client ID configured in Keycloak
+            url: KEYCLOAK_URL,
+            realm: KEYCLOAK_REALM,
+            clientId: KEYCLOAK_CLIENT_ID
         });
 
         const authenticated = await keycloak.init({ onLoad: 'check-sso' });
@@ -18,13 +26,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('btn-login').style.display = 'none';
             document.getElementById('user-info').classList.remove('hidden');
             document.getElementById('user-name').textContent = keycloak.tokenParsed.preferred_username || keycloak.tokenParsed.email || 'User';
-            
-            // Check if user has admin role (optional, depending on keycloak setup)
+
+            const username = keycloak.tokenParsed.preferred_username;
+            const demoCustomerId = DEMO_CUSTOMER_IDS[username];
+            if (demoCustomerId) {
+                document.getElementById('user-id').value = demoCustomerId;
+                document.getElementById('history-user-id').value = demoCustomerId;
+            }
+
             const roles = keycloak.tokenParsed.realm_access?.roles || [];
             if (roles.includes('admin') || roles.includes('ADMIN')) {
-                document.getElementById('admin-tab-btn').style.display = 'inline-block';
-            } else {
-                // Show it anyway for demo purposes
                 document.getElementById('admin-tab-btn').style.display = 'inline-block';
             }
         }
@@ -50,6 +61,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
         }
         return fetch(url, options);
+    };
+
+    const getErrorMessage = async (response, fallback) => {
+        const text = await response.text();
+        if (!text) return fallback;
+        try {
+            const payload = JSON.parse(text);
+            return payload.message || fallback;
+        } catch {
+            return text;
+        }
     };
 
     // Tabs Logic
@@ -82,7 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const response = await fetchWithAuth(`${API_BASE_URL}/inventory/event/${eventId}`);
-            if (!response.ok) throw new Error('Event not found or server error');
+            if (!response.ok) throw new Error(await getErrorMessage(response, 'Event not found or server error'));
 
             const data = await response.json();
             document.getElementById('res-event-name').textContent = data.event || `Event #${data.eventId}`;
@@ -125,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 })
             });
 
-            if (!response.ok) throw new Error(await response.text() || 'Booking failed');
+            if (!response.ok) throw new Error(await getErrorMessage(response, 'Booking failed'));
 
             const data = await response.json();
             bookingMessage.textContent = `Success! Booked ${data.ticketCount} ticket(s). Total: $${data.totalPrice}`;
@@ -156,7 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ordersList.innerHTML = '<p>Loading...</p>';
         try {
             const response = await fetchWithAuth(`${ORDERS_API_URL}/history?CustomerID=${userId}`);
-            if(!response.ok) throw new Error("Failed to fetch orders");
+            if(!response.ok) throw new Error(await getErrorMessage(response, "Failed to fetch orders"));
             
             const orders = await response.json();
             ordersList.innerHTML = '';
@@ -190,7 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         try {
             const res = await fetchWithAuth(`${ORDERS_API_URL}/${orderId}/cancel`, { method: 'DELETE' });
-            if(!res.ok) throw new Error("Failed to cancel order");
+            if(!res.ok) throw new Error(await getErrorMessage(res, "Failed to cancel order"));
             alert("Order canceled successfully");
             fetchOrdersBtn.click(); // reload
         } catch(e) {
@@ -254,7 +276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 body: method !== 'DELETE' ? JSON.stringify(payload) : null
             });
 
-            if(!res.ok) throw new Error(`Failed to ${action} event`);
+            if(!res.ok) throw new Error(await getErrorMessage(res, `Failed to ${action} event`));
             
             adminMsg.textContent = `Successfully ${action}d event`;
             adminMsg.classList.remove('hidden');

@@ -1,9 +1,11 @@
-# 1. Chọn môi trường chạy Java 21 (giống trong video)
-FROM docker.io/eclipse-temurin:21-jdk
+FROM maven:3.9.12-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn -B -DskipTests package
 
-# 2. Copy file .jar đã build vào trong container
-# Lưu ý: Em phải chạy 'mvn clean package' trước để có file trong thư mục target/
-COPY target/*.jar app.jar
-
-# 3. Lệnh chạy ứng dụng khi container khởi động
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
