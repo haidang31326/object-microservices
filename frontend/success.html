@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful | EventTick</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --success: #10b981;
+            --bg-main: #f8fafc;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .success-card {
+            background-color: #ffffff;
+            border-radius: 20px;
+            padding: 3rem;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+        .success-icon {
+            font-size: 4rem;
+            color: var(--success);
+            background-color: rgba(16, 185, 129, 0.1);
+            width: 100px;
+            height: 100px;
+            line-height: 100px;
+            border-radius: 50%;
+            margin: 0 auto 1.5rem;
+        }
+        h1 {
+            margin: 0 0 0.5rem;
+            font-size: 1.85rem;
+            font-weight: 700;
+        }
+        p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin: 0 0 2rem;
+        }
+        .order-details {
+            background-color: #f1f5f9;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+        .order-details div {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .order-details div:last-child {
+            margin-bottom: 0;
+        }
+        .btn-home {
+            display: inline-block;
+            background-color: var(--primary);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 0.75rem 2rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+        .btn-home:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="success-card">
+        <div class="success-icon">✓</div>
+        <h1>Payment Successful!</h1>
+        <p>Thank you for your purchase. Your payment has been processed successfully by Stripe and your ticket capacity is secured.</p>
+        
+        <div class="order-details">
+            <div>
+                <span>Order Reference:</span>
+                <strong id="lbl-order-id">#Loading...</strong>
+            </div>
+            <div>
+                <span>Stripe Session:</span>
+                <span id="lbl-session-id" style="color: var(--text-muted); font-size: 0.8rem; word-break: break-all;">Loading...</span>
+            </div>
+        </div>
+
+        <a href="index.html" class="btn-home" id="btn-back">Go to Dashboard</a>
+    </div>
+
+    <script>
+        // Extract order info from URL
+        const params = new URLSearchParams(window.location.search);
+        const orderId = params.get('orderId');
+        const sessionId = params.get('session_id');
+
+        if (orderId) {
+            document.getElementById('lbl-order-id').innerText = '#' + orderId;
+        }
+        if (sessionId) {
+            document.getElementById('lbl-session-id').innerText = sessionId.substring(0, 24) + '...';
+        }
+
+        // Auto redirect user home after 8 seconds
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 8000);
+    </script>
+</body>
+</html>

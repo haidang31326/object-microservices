@@ -5,6 +5,7 @@ import com.example.orderservice.Response.OrderResponse;
 import com.example.orderservice.client.InventoryServiceClient;
 import com.example.orderservice.entity.Order;
 import com.example.orderservice.repository.OrderRepository;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -42,6 +43,7 @@ public class OrderService {
                 .eventId(bookingevent.getEventId())
                 .ticketCount(bookingevent.getTicketCount())
                 .totalPrice(bookingevent.getTotalPrice())
+                .status("PENDING")
                 .build();
     }
     public List<OrderResponse> getAllOrder(Long CustomerID) {
@@ -53,6 +55,7 @@ public class OrderService {
                 .ticketCount(order.getTicketCount())
                 .totalPrice(order.getTotalPrice())
                 .placedAt(order.getPlacedAt())
+                .status(order.getStatus())
                 .build()).toList(
         );
     }
@@ -65,5 +68,15 @@ public class OrderService {
         orderRepository.delete(order);
         inventoryServiceClient.restoreEventCapacity(eventId, ticketCount);
         log.info("Canceled order {} and restored {} tickets for eventId {}", orderId, ticketCount, eventId);
+    }
+    @Transactional
+    public void markOrderAsPaid(Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+
+        order.setStatus("PAID");
+        orderRepository.save(order);
+    }
+    public Order getOrderById(Long orderId) {
+        return orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
     }
 }

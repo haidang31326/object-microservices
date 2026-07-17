@@ -1,60 +1,162 @@
-const CONFIG = window.EVENTTICK_CONFIG || {};
-const API_BASE_URL = CONFIG.apiBaseUrl || 'http://localhost:8090/api/v1';
-const ORDERS_API_URL = CONFIG.ordersApiUrl || 'http://localhost:8090/orders';
-const KEYCLOAK_URL = CONFIG.keycloakUrl || 'http://localhost:8091';
-const KEYCLOAK_REALM = CONFIG.keycloakRealm || 'ticketing';
-const KEYCLOAK_CLIENT_ID = CONFIG.keycloakClientId || 'ticketing-client';
+// =============================================================================
+// EventTick - Frontend Redesigned Application
+// API Gateway: http://localhost:8090
+// Keycloak:    http://localhost:8091 (realm: ticketing, client: ticketing-client)
+// =============================================================================
 
-const DEMO_CUSTOMER_IDS = {
-    customer: '1',
-    admin: '2'
-};
+const API_BASE_URL = 'http://localhost:8090/api/v1';
+const ORDERS_API_URL = 'http://localhost:8090/orders';
 
 let keycloak = null;
+let currentEventPrice = 0;
+let fetchedEvents = []; // Cache for local search filtering
+let bookingTimeout = null; // Reference for auto-close timeout
 
-document.addEventListener('DOMContentLoaded', async () => {
+// ---------------------------------------------------------------------------
+// Utility Notifications & Error Handling
+// ---------------------------------------------------------------------------
+function showNotification(elementId, message, type = 'info') {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.textContent = message;
+    el.className = `message ${type}`;
+    el.classList.remove('hidden');
+    if (type === 'success') {
+        setTimeout(() => el.classList.add('hidden'), 8000);
+    }
+}
+
+function hideNotification(elementId) {
+    const el = document.getElementById(elementId);
+    if (el) el.classList.add('hidden');
+}
+
+/**
+ * Extracts a friendly user-facing message from error responses.
+ * Avoids showing raw technical JSON strings or Whitelabel HTML pages to clients.
+ */
+function getFriendlyErrorMessage(errText, defaultMsg = 'An error occurred. Please try again.') {
+    if (!errText) return defaultMsg;
+    
+    // 1. Try to parse as JSON
     try {
-        keycloak = new Keycloak({
-            url: KEYCLOAK_URL,
-            realm: KEYCLOAK_REALM,
-            clientId: KEYCLOAK_CLIENT_ID
-        });
-
-        const authenticated = await keycloak.init({ onLoad: 'check-sso' });
-        
-        if (authenticated) {
-            document.getElementById('btn-login').style.display = 'none';
-            document.getElementById('user-info').classList.remove('hidden');
-            document.getElementById('user-name').textContent = keycloak.tokenParsed.preferred_username || keycloak.tokenParsed.email || 'User';
-
-            const username = keycloak.tokenParsed.preferred_username;
-            const demoCustomerId = DEMO_CUSTOMER_IDS[username];
-            if (demoCustomerId) {
-                document.getElementById('user-id').value = demoCustomerId;
-                document.getElementById('history-user-id').value = demoCustomerId;
-            }
-
-            const roles = keycloak.tokenParsed.realm_access?.roles || [];
-            if (roles.includes('admin') || roles.includes('ADMIN')) {
-                document.getElementById('admin-tab-btn').style.display = 'inline-block';
+        const errObj = JSON.parse(errText);
+        if (errObj && typeof errObj === 'object') {
+            const message = errObj.message || errObj.error || errObj.errorMessage;
+            if (message && message !== 'No message available' && message !== 'Internal Server Error') {
+                return message;
             }
         }
     } catch (e) {
-        console.error('Failed to initialize Keycloak', e);
+        // Not valid JSON
+    }
+    
+    // 2. Check if it's a raw string containing JSON-like structure
+    const trimmed = errText.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+            const msgMatch = trimmed.match(/"message"\s*:\s*"([^"]+)"/);
+            if (msgMatch && msgMatch[1] && msgMatch[1] !== 'No message available') {
+                return msgMatch[1];
+            }
+            const errMatch = trimmed.match(/"error"\s*:\s*"([^"]+)"/);
+            if (errMatch && errMatch[1] && errMatch[1] !== 'Internal Server Error') {
+                return errMatch[1];
+            }
+        } catch (e) {}
+    }
+    
+    // 3. Check if it's an HTML Whitelabel page
+    if (errText.includes('<html') || errText.includes('<body') || errText.includes('<!DOCTYPE') || errText.includes('whitelabel')) {
+        return defaultMsg;
+    }
+    
+    // 4. If it's a short text (less than 120 chars) and not JSON, return it
+    if (errText.length < 120 && !errText.includes('{')) {
+        return errText;
+    }
+    
+    return defaultMsg;
+}
+
+// ---------------------------------------------------------------------------
+// Utility: Button loading state
+// ---------------------------------------------------------------------------
+function setLoading(btn, loading, originalText) {
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Processing...' : originalText;
+}
+
+// ---------------------------------------------------------------------------
+// Generate Aesthetic Banner Gradients (Ticketbox Style)
+// ---------------------------------------------------------------------------
+function getCardGradient(id) {
+    const gradients = [
+        'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',   // Blue
+        'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',   // Purple
+        'linear-gradient(135deg, #10b981 0%, #047857 100%)',   // Teal
+        'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',   // Pink
+        'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)'    // Orange
+    ];
+    return gradients[id % gradients.length];
+}
+
+// ---------------------------------------------------------------------------
+// DOM Initialization
+// ---------------------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', async () => {
+
+    // ── 1. Initialize Keycloak (Silent SSO check) ───────────────────────────
+    try {
+        keycloak = new Keycloak({
+            url: 'http://localhost:8091',
+            realm: 'ticketing',
+            clientId: 'ticketing-client'
+        });
+
+        const authenticated = await keycloak.init({ onLoad: 'check-sso' });
+
+        if (authenticated) {
+            document.getElementById('btn-login').style.display = 'none';
+            document.getElementById('user-info').classList.remove('hidden');
+            
+            // Show "My Orders" nav tab for logged in users
+            document.getElementById('btn-nav-orders').style.display = 'inline-block';
+
+            const token = keycloak.tokenParsed;
+            const username = token.preferred_username || token.email || 'Demo User';
+            document.getElementById('user-name').textContent = username;
+
+            // Role-based admin tab — only show if user has ADMIN role
+            const roles = token.realm_access?.roles || [];
+            if (roles.includes('ADMIN') || roles.includes('admin')) {
+                document.getElementById('btn-nav-admin').style.display = 'inline-block';
+            }
+        } else {
+            document.getElementById('btn-login').style.display = 'inline-block';
+            document.getElementById('user-info').classList.add('hidden');
+        }
+    } catch (e) {
+        console.warn('Keycloak not reachable — running in demo mode:', e.message);
     }
 
-    // Auth Buttons
+    // ── 2. Auth Buttons ──────────────────────────────────────────────────────
     document.getElementById('btn-login').addEventListener('click', () => {
-        if(keycloak) keycloak.login();
+        if (keycloak) keycloak.login();
     });
     document.getElementById('btn-logout').addEventListener('click', () => {
-        if(keycloak) keycloak.logout();
+        if (keycloak) keycloak.logout();
     });
 
-    // Helper for fetch with Auth Token
+    // ── 3. Fetch helper (adds Bearer token if authenticated) ─────────────────
     const fetchWithAuth = async (url, options = {}) => {
         if (keycloak && keycloak.authenticated) {
-            await keycloak.updateToken(30);
+            try {
+                await keycloak.updateToken(30);
+            } catch (e) {
+                console.warn('Token refresh failed:', e);
+            }
             options.headers = {
                 ...options.headers,
                 'Authorization': `Bearer ${keycloak.token}`
@@ -63,202 +165,420 @@ document.addEventListener('DOMContentLoaded', async () => {
         return fetch(url, options);
     };
 
-    const getErrorMessage = async (response, fallback) => {
-        const text = await response.text();
-        if (!text) return fallback;
+    // ── 4. Dynamic Guest Event Listing ───────────────────────────────────────
+    const eventsGrid = document.getElementById('events-grid');
+
+    const fetchAndRenderEvents = async () => {
         try {
-            const payload = JSON.parse(text);
-            return payload.message || fallback;
-        } catch {
-            return text;
+            const response = await fetch(`${API_BASE_URL}/inventory/events`);
+            if (!response.ok) throw new Error('Could not retrieve events catalog.');
+            
+            fetchedEvents = await response.json();
+            renderEventCards(fetchedEvents);
+        } catch (error) {
+            eventsGrid.innerHTML = `
+                <div class="empty-state">
+                    <p>❌ Error loading events catalog: ${error.message}</p>
+                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">Verify that your inventory-service and API Gateway are running.</p>
+                </div>`;
         }
     };
 
-    // Tabs Logic
-    const tabBtns = document.querySelectorAll('.tab-btn');
+    const renderEventCards = (events) => {
+        if (!events || events.length === 0) {
+            eventsGrid.innerHTML = '<p class="empty-state">No events matched your search.</p>';
+            return;
+        }
+
+        eventsGrid.innerHTML = '';
+        events.forEach(event => {
+            const priceFormatted = event.ticketPrice
+                ? Number(event.ticketPrice).toLocaleString('vi-VN') + ' ₫'
+                : '10.000 ₫';
+            const gradient = getCardGradient(event.eventId || 0);
+            
+            // Map category tags based on title/name keywords
+            let category = 'LIVE SHOW';
+            if (event.event.toUpperCase().includes('FEST')) category = 'FESTIVAL';
+            if (event.event.toUpperCase().includes('EDM') || event.event.toUpperCase().includes('NIGHT')) category = 'EDM NIGHT';
+            if (event.event.toUpperCase().includes('ROCK')) category = 'CONCERT';
+
+            const card = document.createElement('div');
+            card.className = 'event-card';
+            card.innerHTML = `
+                <div class="event-card-banner" style="background: ${gradient}">
+                    <span class="category-tag">${category}</span>
+                    <h3>${event.event}</h3>
+                </div>
+                <div class="event-card-body">
+                    <h4 class="event-card-title">${event.event}</h4>
+                    <p class="event-card-venue">📍 ${event.venue ? event.venue.name : 'Unknown Venue'}</p>
+                    <div class="event-card-footer">
+                        <div class="event-card-price">
+                            <span class="price-label">Price per Ticket</span>
+                            <span class="price-value">${priceFormatted}</span>
+                        </div>
+                        <button class="btn-card-book" onclick="openBookingModal(${event.eventId})">Book Now</button>
+                    </div>
+                </div>
+            `;
+            eventsGrid.appendChild(card);
+        });
+    };
+
+    // Load events on page load
+    await fetchAndRenderEvents();
+
+    // ── 5. Client-Side Instant Search Filter ────────────────────────────────
+    const searchInput = document.getElementById('search-input');
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        const filtered = fetchedEvents.filter(event => 
+            event.event.toLowerCase().includes(query) || 
+            (event.venue && event.venue.name.toLowerCase().includes(query))
+        );
+        renderEventCards(filtered);
+    });
+
+    // ── 6. Tab Navigation ────────────────────────────────────────────────────
+    const navButtons = document.querySelectorAll('.nav-btn');
     const tabContents = document.querySelectorAll('.tab-content');
 
-    tabBtns.forEach(btn => {
+    navButtons.forEach(btn => {
         btn.addEventListener('click', () => {
-            tabBtns.forEach(b => b.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active', 'hidden'));
-            tabContents.forEach(c => c.classList.add('hidden'));
+            navButtons.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => { c.classList.remove('active'); c.classList.add('hidden'); });
+
+            // Clear any active feedbacks/notifications on tab switch
+            hideNotification('booking-message');
+            hideNotification('orders-feedback');
+            hideNotification('admin-message');
 
             btn.classList.add('active');
-            document.getElementById(btn.dataset.target).classList.remove('hidden');
-            document.getElementById(btn.dataset.target).classList.add('active');
+            const target = document.getElementById(btn.dataset.target);
+            target.classList.remove('hidden');
+            target.classList.add('active');
         });
     });
 
-    // --- Book Ticket Tab ---
-    const searchBtn = document.getElementById('btn-search-event');
-    const eventInput = document.getElementById('event-id-input');
-    const eventDetails = document.getElementById('event-details');
-    
-    searchBtn.addEventListener('click', async () => {
-        const eventId = eventInput.value;
-        if (!eventId) return alert('Please enter an Event ID');
-
-        searchBtn.disabled = true;
-        searchBtn.textContent = 'Searching...';
-
-        try {
-            const response = await fetchWithAuth(`${API_BASE_URL}/inventory/event/${eventId}`);
-            if (!response.ok) throw new Error(await getErrorMessage(response, 'Event not found or server error'));
-
-            const data = await response.json();
-            document.getElementById('res-event-name').textContent = data.event || `Event #${data.eventId}`;
-            document.getElementById('res-event-capacity').textContent = data.capacity || '-';
-            document.getElementById('res-event-left').textContent = data.capacity !== undefined ? data.capacity : '-'; // inventoryService returns capacity mapping to leftCapacity
-            document.getElementById('res-event-price').textContent = data.ticketPrice ? `$${data.ticketPrice}` : '-';
-            
-            eventDetails.classList.remove('hidden');
-            document.getElementById('book-event-id').value = eventId; // Use entered ID since response might not have it if mapped incorrectly
-        } catch (error) {
-            alert(error.message);
-            eventDetails.classList.add('hidden');
-        } finally {
-            searchBtn.disabled = false;
-            searchBtn.textContent = 'Search';
-        }
-    });
-
+    // ── 7. Booking Modal Logic & Helpers ─────────────────────────────────────
     const bookingForm = document.getElementById('booking-form');
     const bookingMessage = document.getElementById('booking-message');
 
+    window.openBookingModal = async (eventId) => {
+        hideNotification('booking-message');
+        
+        try {
+            const res = await fetch(`${API_BASE_URL}/inventory/event/${eventId}`);
+            if (!res.ok) throw new Error('Failed to retrieve event details.');
+            
+            const eventData = await res.json();
+            
+            currentEventPrice = eventData.ticketPrice || 0;
+            document.getElementById('modal-event-title').textContent = eventData.event;
+            document.getElementById('modal-event-venue').textContent = `📍 ${eventData.venue ? eventData.venue.name : 'Location'}`;
+            document.getElementById('modal-ticket-price').textContent = Number(currentEventPrice).toLocaleString('vi-VN') + ' ₫';
+            document.getElementById('modal-event-left').textContent = `${eventData.capacity} tickets left`;
+            document.getElementById('book-event-id').value = eventId;
+            document.getElementById('ticket-count').value = 1;
+            
+            updateTotalPrice();
+            
+            // Show modal
+            document.getElementById('booking-modal').classList.remove('hidden');
+        } catch (err) {
+            alert(`Error loading event: ${err.message}`);
+        }
+    };
+
+    window.quickBookFeatured = (eventId) => {
+        window.openBookingModal(eventId);
+    };
+
+    window.adjustQty = (delta) => {
+        const input = document.getElementById('ticket-count');
+        let val = parseInt(input.value) + delta;
+        if (val < 1) val = 1;
+        if (val > 10) val = 10;
+        input.value = val;
+        updateTotalPrice();
+    };
+
+    function updateTotalPrice() {
+        const qty = parseInt(document.getElementById('ticket-count').value) || 1;
+        const total = currentEventPrice * qty;
+        document.getElementById('booking-total-price').textContent = Number(total).toLocaleString('vi-VN') + ' ₫';
+    }
+
+    window.closeModal = () => {
+        document.getElementById('booking-modal').classList.add('hidden');
+        bookingForm.reset();
+        hideNotification('booking-message');
+        if (bookingTimeout) {
+            clearTimeout(bookingTimeout);
+            bookingTimeout = null;
+        }
+    };
+
     bookingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const userId = document.getElementById('user-id').value;
-        const eventId = document.getElementById('book-event-id').value;
-        const ticketCount = document.getElementById('ticket-count').value;
+        
+        // GUEST AUTHENTICATION GATE
+        if (keycloak && !keycloak.authenticated) {
+            if (confirm('Authentication required. Redirecting you to Keycloak to log in.')) {
+                keycloak.login();
+            }
+            return;
+        }
+
+        const userId = parseInt(document.getElementById('user-id').value);
+        const eventId = parseInt(document.getElementById('book-event-id').value);
+        const ticketCount = parseInt(document.getElementById('ticket-count').value);
+
+        if (!userId || userId < 1) {
+            showNotification('booking-message', 'Please enter a valid Customer ID (e.g. 3).', 'error');
+            return;
+        }
 
         const submitBtn = document.getElementById('btn-book');
-        submitBtn.disabled = true;
-        bookingMessage.className = 'message hidden';
+        setLoading(submitBtn, true, 'Confirm Purchase');
+        hideNotification('booking-message');
 
         try {
             const response = await fetchWithAuth(`${API_BASE_URL}/booking`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: parseInt(userId),
-                    eventId: parseInt(eventId),
-                    ticketCount: parseInt(ticketCount)
-                })
+                body: JSON.stringify({ userId, eventId, ticketCount })
             });
 
-            if (!response.ok) throw new Error(await getErrorMessage(response, 'Booking failed'));
+            if (!response.ok) {
+                const errText = await response.text();
+                const friendlyMsg = getFriendlyErrorMessage(errText, 'Purchase failed. Please verify event availability.');
+                throw new Error(friendlyMsg);
+            }
 
             const data = await response.json();
-            bookingMessage.textContent = `Success! Booked ${data.ticketCount} ticket(s). Total: $${data.totalPrice}`;
-            bookingMessage.classList.remove('hidden');
-            bookingMessage.classList.add('success');
-            
-            bookingForm.reset();
-            eventDetails.classList.add('hidden');
-            eventInput.value = '';
+            const totalFormatted = data.totalPrice
+                ? Number(data.totalPrice).toLocaleString('vi-VN') + ' ₫'
+                : data.totalPrice;
+
+            showNotification('booking-message', 
+                `🎉 Booking Successful! Redirecting you to orders tab to pay...`, 
+                'success');
+
+            // Refresh catalog and auto-redirect to My Orders tab to pay
+            bookingTimeout = setTimeout(async () => {
+                await fetchAndRenderEvents();
+                closeModal();
+                
+                // Switch to My Orders tab
+                const ordersBtn = document.getElementById('btn-nav-orders');
+                if (ordersBtn) {
+                    ordersBtn.click();
+                    
+                    // Auto-fill and fetch orders for the customer
+                    const customerIdOverride = document.getElementById('user-id').value;
+                    document.getElementById('history-user-id').value = customerIdOverride;
+                    document.getElementById('btn-fetch-orders').click();
+                }
+            }, 2000);
+
         } catch (error) {
-            bookingMessage.textContent = error.message;
-            bookingMessage.classList.remove('hidden');
-            bookingMessage.classList.add('error');
+            showNotification('booking-message', `❌ Error: ${error.message}`, 'error');
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Confirm Booking';
+            setLoading(submitBtn, false, 'Confirm Purchase');
         }
     });
 
-    // --- Order History Tab ---
+    // ── 8. My Orders (Purchase History) ──────────────────────────────────────
     const fetchOrdersBtn = document.getElementById('btn-fetch-orders');
     const ordersList = document.getElementById('orders-list');
 
     fetchOrdersBtn.addEventListener('click', async () => {
-        const userId = document.getElementById('history-user-id').value;
-        if(!userId) return alert("Enter User ID");
+        const userId = document.getElementById('history-user-id').value.trim();
+        if (!userId) {
+            showNotification('orders-feedback', 'Enter Customer ID to check history.', 'error');
+            return;
+        }
+        hideNotification('orders-feedback');
+        setLoading(fetchOrdersBtn, true, 'Fetch Orders');
+        ordersList.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Fetching purchase history...</p></div>';
 
-        ordersList.innerHTML = '<p>Loading...</p>';
         try {
             const response = await fetchWithAuth(`${ORDERS_API_URL}/history?CustomerID=${userId}`);
-            if(!response.ok) throw new Error(await getErrorMessage(response, "Failed to fetch orders"));
-            
+            if (!response.ok) {
+                const errText = await response.text();
+                const friendlyMsg = getFriendlyErrorMessage(errText, 'Failed to fetch purchase history. Please verify your Customer ID.');
+                throw new Error(friendlyMsg);
+            }
+
             const orders = await response.json();
             ordersList.innerHTML = '';
-            
-            if(orders.length === 0) {
-                ordersList.innerHTML = '<p>No orders found.</p>';
+
+            if (!orders || orders.length === 0) {
+                ordersList.innerHTML = '<p class="empty-state">No active bookings found for this customer ID.</p>';
                 return;
             }
 
             orders.forEach(order => {
-                const item = document.createElement('div');
-                item.className = 'order-item';
-                item.innerHTML = `
+                const totalFormatted = order.totalPrice
+                    ? Number(order.totalPrice).toLocaleString('vi-VN') + ' ₫'
+                    : '-';
+                const dateFormatted = order.placedAt
+                    ? new Date(order.placedAt).toLocaleString('vi-VN')
+                    : '-';
+
+                // Handle payment status (assume order.status is sent from backend)
+                const status = order.status || 'PENDING'; 
+                const statusClass = status.toUpperCase() === 'PAID' ? 'status-paid' : 'status-pending';
+                const statusLabel = status.toUpperCase() === 'PAID' ? 'Paid' : 'Unpaid';
+
+                const card = document.createElement('div');
+                card.className = 'order-item';
+                card.innerHTML = `
                     <div class="order-info">
-                        <strong>Order #${order.id || order.id}</strong>
+                        <div class="order-title-row">
+                            <strong>Order #${order.id}</strong>
+                            <span class="order-status-badge ${statusClass}">${statusLabel}</span>
+                        </div>
                         <span>Event ID: ${order.eventId}</span>
                         <span>Tickets: ${order.ticketCount}</span>
-                        <span>Total: $${order.totalPrice}</span>
+                        <span>Total: ${totalFormatted}</span>
+                        <span class="order-date">Date: ${dateFormatted}</span>
                     </div>
-                    <button class="btn-danger" onclick="cancelOrder(${order.id || order.id})">Cancel</button>
+                    <div class="order-actions">
+                        ${status.toUpperCase() !== 'PAID' ? `<button class="btn-pay" id="pay-btn-${order.id}" onclick="payOrder(${order.id})">Pay Now</button>` : ''}
+                        <button class="btn-danger" id="cancel-btn-${order.id}" onclick="cancelOrder(${order.id})">Cancel Ticket</button>
+                    </div>
                 `;
-                ordersList.appendChild(item);
+                ordersList.appendChild(card);
             });
-        } catch(e) {
-            ordersList.innerHTML = `<p style="color:var(--error)">${e.message}</p>`;
+
+        } catch (err) {
+            ordersList.innerHTML = '';
+            showNotification('orders-feedback', `❌ ${err.message}`, 'error');
+        } finally {
+            setLoading(fetchOrdersBtn, false, 'Fetch Orders');
         }
     });
 
     window.cancelOrder = async (orderId) => {
-        if(!confirm(`Are you sure you want to cancel order #${orderId}?`)) return;
-        
+        const btn = document.getElementById(`cancel-btn-${orderId}`);
+        if (!confirm(`Cancel order #${orderId}? This restores the inventory capacity.`)) return;
+
+        if (btn) { btn.disabled = true; btn.textContent = 'Cancelling...'; }
+
         try {
             const res = await fetchWithAuth(`${ORDERS_API_URL}/${orderId}/cancel`, { method: 'DELETE' });
-            if(!res.ok) throw new Error(await getErrorMessage(res, "Failed to cancel order"));
-            alert("Order canceled successfully");
-            fetchOrdersBtn.click(); // reload
-        } catch(e) {
-            alert(e.message);
+            if (!res.ok) {
+                const errText = await res.text();
+                const friendlyMsg = getFriendlyErrorMessage(errText, 'Failed to cancel order.');
+                throw new Error(friendlyMsg);
+            }
+            showNotification('orders-feedback', `✅ Canceled order #${orderId} successfully. Capacity restored.`, 'success');
+            
+            // Reload order list
+            fetchOrdersBtn.click();
+            // Reload event catalog capacity
+            await fetchAndRenderEvents();
+        } catch (err) {
+            showNotification('orders-feedback', `❌ ${err.message}`, 'error');
+            if (btn) { btn.disabled = false; btn.textContent = 'Cancel Ticket'; }
         }
     };
 
-    // --- Admin Tab ---
+    window.payOrder = async (orderId) => {
+        const btn = document.getElementById(`pay-btn-${orderId}`);
+        if (btn) { btn.disabled = true; btn.textContent = 'Redirecting...'; }
+        showNotification('orders-feedback', 'Connecting to Stripe secure checkout...', 'info');
+
+        try {
+            const response = await fetchWithAuth(`${ORDERS_API_URL}/${orderId}/checkout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                const friendlyMsg = getFriendlyErrorMessage(errText, 'Failed to initialize payment session.');
+                throw new Error(friendlyMsg);
+            }
+
+            const data = await response.json();
+            if (data.checkoutUrl) {
+                // Redirect user to Stripe payment page
+                window.location.href = data.checkoutUrl;
+            } else {
+                throw new Error('No checkout URL returned from payment server.');
+            }
+        } catch (err) {
+            showNotification('orders-feedback', `❌ Payment Error: ${err.message}`, 'error');
+            if (btn) { btn.disabled = false; btn.textContent = 'Pay Now'; }
+        }
+    };
+
+    // ── 9. Tester Console / Simulator drawer ────────────────────────────────
+    window.toggleDevDrawer = () => {
+        const drawer = document.getElementById('dev-drawer');
+        drawer.classList.toggle('collapsed');
+    };
+
+    window.overrideCustomerID = (id) => {
+        document.getElementById('user-id').value = id;
+        document.getElementById('history-user-id').value = id;
+        
+        // auto-fetch if we are in orders tab
+        const ordersTab = document.getElementById('orders-section');
+        if (ordersTab && ordersTab.classList.contains('active')) {
+            fetchOrdersBtn.click();
+        }
+    };
+
+    // ── 10. Admin Controller Logic ───────────────────────────────────────────
     const adminActionSelect = document.getElementById('admin-action-select');
     const adminForm = document.getElementById('admin-form');
-    const adminMsg = document.getElementById('admin-message');
 
     adminActionSelect.addEventListener('change', (e) => {
         const action = e.target.value;
-        document.getElementById('admin-event-id-group').style.display = action === 'create' ? 'none' : 'block';
-        
+        const isCreate = action === 'create';
         const isDelete = action === 'delete';
-        document.querySelector('.name-group').style.display = isDelete ? 'none' : 'block';
-        document.querySelector('.capacity-group').style.display = isDelete ? 'none' : 'block';
-        document.querySelector('.price-group').style.display = isDelete ? 'none' : 'block';
-        document.getElementById('admin-venue-id-group').style.display = action === 'create' ? 'block' : 'none';
-        
-        // Remove required attributes for hidden fields to allow form submission
-        const requiredFields = ['admin-venue-id', 'admin-event-name', 'admin-event-total-cap', 'admin-event-left-cap', 'admin-event-price'];
-        requiredFields.forEach(id => document.getElementById(id).required = !isDelete);
-        if(action !== 'create') document.getElementById('admin-venue-id').required = false;
+
+        document.getElementById('admin-event-id-group').style.display   = isCreate ? 'none' : 'block';
+        document.getElementById('admin-venue-id-group').style.display   = isCreate ? 'block' : 'none';
+        document.querySelector('.name-group').style.display             = isDelete ? 'none' : 'block';
+        document.querySelector('.capacity-group').style.display         = isDelete ? 'none' : 'block';
+        document.querySelector('.price-group').style.display            = isDelete ? 'none' : 'block';
+
+        const reqFields = ['admin-venue-id', 'admin-event-name', 'admin-event-total-cap', 'admin-event-left-cap', 'admin-event-price'];
+        reqFields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.required = !isDelete;
+        });
+        if (!isCreate) {
+            const venueIdEl = document.getElementById('admin-venue-id');
+            if (venueIdEl) venueIdEl.required = false;
+        }
     });
 
     adminForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const action = adminActionSelect.value;
+        const action  = adminActionSelect.value;
         const eventId = document.getElementById('admin-event-id').value;
         const venueId = document.getElementById('admin-venue-id').value;
-        
+        const submitBtn = document.getElementById('btn-admin-submit');
+
         const payload = {
-            id: eventId ? parseInt(eventId) : null,
-            name: document.getElementById('admin-event-name').value,
+            id:            eventId ? parseInt(eventId) : null,
+            name:          document.getElementById('admin-event-name').value,
             totalCapacity: parseInt(document.getElementById('admin-event-total-cap').value),
-            leftCapacity: parseInt(document.getElementById('admin-event-left-cap').value),
-            price: parseFloat(document.getElementById('admin-event-price').value)
+            leftCapacity:  parseInt(document.getElementById('admin-event-left-cap').value),
+            price:         parseFloat(document.getElementById('admin-event-price').value)
         };
 
         let url = `${API_BASE_URL}/inventory/event`;
         let method = 'POST';
 
-        if(action === 'create') {
+        if (action === 'create') {
             url += `/create/venue/${venueId}`;
         } else if (action === 'update') {
             url += `/${eventId}`;
@@ -268,24 +588,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             method = 'DELETE';
         }
 
-        adminMsg.className = 'message hidden';
+        hideNotification('admin-message');
+        setLoading(submitBtn, true, 'Execute Action');
+
         try {
             const res = await fetchWithAuth(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: method !== 'DELETE' ? JSON.stringify(payload) : null
+                body: method !== 'DELETE' ? JSON.stringify(payload) : undefined
             });
 
-            if(!res.ok) throw new Error(await getErrorMessage(res, `Failed to ${action} event`));
-            
-            adminMsg.textContent = `Successfully ${action}d event`;
-            adminMsg.classList.remove('hidden');
-            adminMsg.classList.add('success');
+            if (!res.ok) {
+                const errText = await res.text();
+                const friendlyMsg = getFriendlyErrorMessage(errText, `Failed to ${action} event. Please check parameters.`);
+                throw new Error(friendlyMsg);
+            }
+
+            showNotification('admin-message', `✅ Event ${action}d successfully.`, 'success');
             adminForm.reset();
-        } catch(err) {
-            adminMsg.textContent = err.message;
-            adminMsg.classList.remove('hidden');
-            adminMsg.classList.add('error');
+            adminActionSelect.dispatchEvent(new Event('change'));
+            
+            // Reload grid catalog
+            await fetchAndRenderEvents();
+
+        } catch (err) {
+            showNotification('admin-message', `❌ Error: ${err.message}`, 'error');
+        } finally {
+            setLoading(submitBtn, false, 'Execute Action');
         }
     });
+
+    // Trigger initial admin layout
+    adminActionSelect.dispatchEvent(new Event('change'));
 });
