@@ -19,4 +19,5 @@ public class OrderResponse {
     private Long ticketCount;
     private BigDecimal totalPrice;
     private LocalDateTime placedAt;
+    private String status;
 }

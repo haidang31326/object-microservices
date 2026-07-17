@@ -36,4 +36,7 @@ public class Order {
 
     @Column(name = "event_id")
     private Long eventId;
+    @Builder.Default
+    @Column(name = "status")
+    private String status = "PENDING";
 }

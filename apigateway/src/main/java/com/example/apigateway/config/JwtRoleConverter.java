@@ -8,18 +8,22 @@ import java.util.*;
 
 public class JwtRoleConverter {
     public static Collection<GrantedAuthority> getGrantedAuthorities(Jwt jwt) {
-        Map<String , Object> realmAccess = jwt.getClaim("realm_access");
+        Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
 
-        if(realmAccess == null) {
+        if (realmAccess == null) {
             return Collections.emptyList();
         }
-        List<String> roles = (List<String>) realmAccess.get("roles");
+
+        Object rolesClaim = realmAccess.get("roles");
+        if (!(rolesClaim instanceof List<?> roles)) {
+            return Collections.emptyList();
+        }
 
         List<GrantedAuthority> authorities = new ArrayList<>();
 
-        for(String role : roles) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+        for (Object role : roles) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toString()));
         }
-return authorities;
+        return authorities;
     }
 }

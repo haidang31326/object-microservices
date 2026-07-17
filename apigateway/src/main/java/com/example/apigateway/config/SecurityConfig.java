@@ -3,6 +3,7 @@ package com.example.apigateway.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -33,6 +34,9 @@ public class SecurityConfig {
                         authorizeRequests
                                 .requestMatchers(excludedUrls)
                                 .permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/v1/inventory/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/v1/inventory/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/v1/inventory/**").hasRole("ADMIN")
                                 .requestMatchers("/api/v1/booking/**").hasRole("CUSTOMER")
                                 .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth ->

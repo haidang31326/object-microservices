@@ -3,6 +3,7 @@ package com.example.bookingservice.controller;
 import com.example.bookingservice.request.BookingRequest;
 import com.example.bookingservice.response.BookingResponse;
 import com.example.bookingservice.service.BookingService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,7 +22,7 @@ public class BookingController {
     }
 
     @PostMapping(consumes = "application/json", produces = "application/json", path = "/booking")
-    public ResponseEntity<BookingResponse> createBooking(@RequestBody BookingRequest bookingRequest) {
+    public ResponseEntity<BookingResponse> createBooking(@Valid @RequestBody BookingRequest bookingRequest) {
         return ResponseEntity.ok(bookingService.createBooking(bookingRequest));
     }
 }

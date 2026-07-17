@@ -59,6 +59,9 @@ public class inventoryService {
     }
     public void updateEventCapacity(Long eventId, Long ticketsBooked) {
         final Event event = eventRepository.findById(eventId).orElseThrow(() -> new EventNotFoundException("Event with id " + eventId + " not found"));
+        if (ticketsBooked > event.getLeftCapacity()) {
+            throw new IllegalArgumentException("Not enough tickets available for event " + eventId);
+        }
         event.setLeftCapacity(event.getLeftCapacity() - ticketsBooked);
         eventRepository.saveAndFlush(event);
         log.info("Updated event capacity for eventId {}: new capacity is {}", eventId, event.getLeftCapacity());
@@ -75,6 +78,7 @@ public class inventoryService {
     public EventInventoryResponse createEvent(Event event, Long venueId ) {
         Venue venue = venueRepository.findById(venueId)
             .orElseThrow(() -> new VenueNotFoundException("Venue with id " + venueId + " not found"));
+        validateCapacity(event.getTotalCapacity(), event.getLeftCapacity());
         event.setVenue(venue);
         final Event savedEvent = eventRepository.save(event);
         return EventInventoryResponse.builder()
@@ -93,6 +97,7 @@ public class inventoryService {
         if(updatedEvent.getPrice() != null) event.setPrice(updatedEvent.getPrice());
         if(updatedEvent.getTotalCapacity() != null) event.setTotalCapacity(updatedEvent.getTotalCapacity());
         if(updatedEvent.getLeftCapacity() != null) event.setLeftCapacity(updatedEvent.getLeftCapacity());
+        validateCapacity(event.getTotalCapacity(), event.getLeftCapacity());
         Event savedEvent = eventRepository.save(event);
         return EventInventoryResponse.builder()
                 .eventId(savedEvent.getId())
@@ -112,8 +117,17 @@ public class inventoryService {
 
     public void restoreEventCapacity(Long eventId, Long ticketsCancelled) {
         Event event = eventRepository.findById(eventId).orElseThrow(() -> new EventNotFoundException("Event with id " + eventId + " not found"));
+        if (event.getLeftCapacity() + ticketsCancelled > event.getTotalCapacity()) {
+            throw new IllegalArgumentException("Restored capacity cannot exceed total capacity for event " + eventId);
+        }
         event.setLeftCapacity(event.getLeftCapacity() + ticketsCancelled);
         eventRepository.saveAndFlush(event);
         log.info("Restored event capacity for eventId {}: new capacity is {}", eventId, event.getLeftCapacity());
+    }
+
+    private void validateCapacity(Long totalCapacity, Long leftCapacity) {
+        if (leftCapacity > totalCapacity) {
+            throw new IllegalArgumentException("leftCapacity cannot exceed totalCapacity");
+        }
     }
 }

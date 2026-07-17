@@ -2,6 +2,7 @@ package com.example.apigateway.route;
 
 import org.springframework.cloud.gateway.server.mvc.handler.GatewayRouterFunctions;
 import org.springframework.cloud.gateway.server.mvc.handler.HandlerFunctions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.function.RequestPredicates;
@@ -13,11 +14,14 @@ import static org.springframework.cloud.gateway.server.mvc.filter.FilterFunction
 @Configuration
 public class OrderServiceRoutes {
 
+    @Value("${services.order.url:http://localhost:8082}")
+    private String orderServiceUrl;
+
     @Bean
     public RouterFunction<ServerResponse> orderRoutes() {
         return GatewayRouterFunctions.route("order-service")
                 .route(RequestPredicates.path("/orders/**"),
-                        HandlerFunctions.http("http://localhost:8082"))
+                        HandlerFunctions.http(orderServiceUrl))
                 .build();
     }
 
@@ -25,7 +29,7 @@ public class OrderServiceRoutes {
     public RouterFunction<ServerResponse> orderServiceApiDocs() {
         return GatewayRouterFunctions.route("order-service-api-docs")
                 .route(RequestPredicates.path("/docs/orderservice/v3/api-docs"),
-                        HandlerFunctions.http("http://localhost:8082"))
+                        HandlerFunctions.http(orderServiceUrl))
                 .filter(setPath("/v3/api-docs"))
                 .build();
     }

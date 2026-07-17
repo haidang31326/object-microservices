@@ -2,7 +2,7 @@ package com.example.bookingservice.service;
 
 import com.example.bookingservice.client.InventoryServiceClient;
 import com.example.bookingservice.entity.Customer;
-import com.example.bookingservice.response.BookingEvent;
+import com.example.bookingservice.event.BookingEvent;
 import com.example.bookingservice.exception.NotEnoughInventoryException;
 import com.example.bookingservice.exception.UserNotFoundException;
 import com.example.bookingservice.repository.CustomerRepository;
@@ -35,7 +35,7 @@ public class BookingService {
     public BookingResponse createBooking(@RequestBody BookingRequest bookingRequest) {
         final Customer customer = customerRepository.findById(bookingRequest.getUserId()).orElseThrow(() -> new UserNotFoundException("Customer not found"));
         final InventoryResponse inventoryResponse = inventoryServiceClient.getInventory(bookingRequest.getEventId());
-        System.out.println("Inventory Response: " + inventoryResponse);
+        log.debug("Inventory Response: {}", inventoryResponse);
         if(inventoryResponse.getLeftCapacity() < bookingRequest.getTicketCount()) {
             throw new NotEnoughInventoryException("Not enough inventory");
         }

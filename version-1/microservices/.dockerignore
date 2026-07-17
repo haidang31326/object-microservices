@@ -1,0 +1,9 @@
+target/
+.mvn/
+mvnw
+mvnw.cmd
+HELP.md
+.gitignore
+volume-data/
+mysql_data/
+mysql_keycloak_data/
