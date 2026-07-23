@@ -45,5 +45,9 @@ public class Event {
     @JoinColumn(name = "venue_id")
     private Venue venue;
 
+    @Version
+    @Column(name = "version")
+    private Integer version;
+
 
 }

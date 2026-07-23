@@ -12,6 +12,7 @@ import com.dang.microservices.reponse.VenueInventoryResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -57,6 +58,7 @@ public class inventoryService {
                 .ticketPrice(event.getPrice())
                 .build();
     }
+    @Transactional
     public void updateEventCapacity(Long eventId, Long ticketsBooked) {
         final Event event = eventRepository.findById(eventId).orElseThrow(() -> new EventNotFoundException("Event with id " + eventId + " not found"));
         if (ticketsBooked > event.getLeftCapacity()) {
@@ -115,6 +117,7 @@ public class inventoryService {
         eventRepository.deleteById(eventId);
     }
 
+    @Transactional
     public void restoreEventCapacity(Long eventId, Long ticketsCancelled) {
         Event event = eventRepository.findById(eventId).orElseThrow(() -> new EventNotFoundException("Event with id " + eventId + " not found"));
         if (event.getLeftCapacity() + ticketsCancelled > event.getTotalCapacity()) {

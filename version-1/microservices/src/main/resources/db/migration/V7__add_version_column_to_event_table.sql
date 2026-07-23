@@ -1,0 +1,1 @@
+ALTER TABLE event ADD COLUMN version INT DEFAULT 0;

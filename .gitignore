@@ -1,0 +1,64 @@
+# ==========================================
+# 🛡️ SECURITY & SENSITIVE KEYS PROTECTION
+# ==========================================
+# Local environment variables & secret files (Stripe, Keycloak, DB keys)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.pem
+*.key
+*.p12
+*.jks
+*.crt
+secrets.properties
+secrets.yml
+secrets.yaml
+secrets.json
+application-secret.properties
+application-secret.yml
+application-secret.yaml
+application-local.properties
+application-local.yml
+application-local.yaml
+
+# ==========================================
+# 📦 BUILD & DEPENDENCY OUTPUTS
+# ==========================================
+target/
+build/
+bin/
+out/
+node_modules/
+dist/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ==========================================
+# 💻 IDE & EDITOR FILES
+# ==========================================
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.sts4-cache/
+.apt_generated
+.factorypath
+.springBeans
+
+# ==========================================
+# 🌐 OS & TEMPORARY FILES
+# ==========================================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak
+*.swp
