@@ -177,8 +177,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderEventCards(fetchedEvents);
         } catch (error) {
             eventsGrid.innerHTML = `
-                <div class="empty-state">
-                    <p>❌ Error loading events catalog: ${error.message}</p>
+                <div class="loading-state">
+                    <p style="color: var(--error);">Error loading events catalog: ${error.message}</p>
                     <p style="font-size: 0.85rem; margin-top: 0.5rem;">Verify that your inventory-service and API Gateway are running.</p>
                 </div>`;
         }
@@ -207,18 +207,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             card.className = 'event-card';
             card.innerHTML = `
                 <div class="event-card-banner" style="background: ${gradient}">
-                    <span class="category-tag">${category}</span>
-                    <h3>${event.event}</h3>
+                    <span class="event-category-tag">${category}</span>
+                    <span class="event-stock-badge ${event.leftCapacity > 0 ? '' : 'sold-out'}">
+                        ${event.leftCapacity > 0 ? event.leftCapacity + ' Available' : 'SOLD OUT'}
+                    </span>
                 </div>
                 <div class="event-card-body">
                     <h4 class="event-card-title">${event.event}</h4>
-                    <p class="event-card-venue">📍 ${event.venue ? event.venue.name : 'Unknown Venue'}</p>
+                    <p class="event-card-venue">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        ${event.venue ? event.venue.name : 'Unknown Venue'}
+                    </p>
+                    <div class="capacity-progress-bar">
+                        <div class="capacity-progress-fill" style="width: ${Math.min(100, Math.max(10, (event.leftCapacity / (event.totalCapacity || 100)) * 100))}%"></div>
+                    </div>
                     <div class="event-card-footer">
-                        <div class="event-card-price">
-                            <span class="price-label">Price per Ticket</span>
-                            <span class="price-value">${priceFormatted}</span>
-                        </div>
-                        <button class="btn-card-book" onclick="openBookingModal(${event.eventId})">Book Now</button>
+                        <span class="event-price">${priceFormatted}</span>
+                        <button class="btn-book-card" onclick="openBookingModal(${event.eventId})">Book Ticket</button>
                     </div>
                 </div>
             `;
@@ -276,7 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             currentEventPrice = eventData.ticketPrice || 0;
             document.getElementById('modal-event-title').textContent = eventData.event;
-            document.getElementById('modal-event-venue').textContent = `📍 ${eventData.venue ? eventData.venue.name : 'Location'}`;
+            document.getElementById('modal-event-venue').textContent = eventData.venue ? eventData.venue.name : 'Location';
             document.getElementById('modal-ticket-price').textContent = Number(currentEventPrice).toLocaleString('vi-VN') + ' ₫';
             document.getElementById('modal-event-left').textContent = `${eventData.capacity} tickets left`;
             document.getElementById('book-event-id').value = eventId;
@@ -384,7 +389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 2000);
 
         } catch (error) {
-            showNotification('booking-message', `❌ Error: ${error.message}`, 'error');
+            showNotification('booking-message', `Error: ${error.message}`, 'error');
         } finally {
             setLoading(submitBtn, false, 'Confirm Purchase');
         }
@@ -512,7 +517,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error('No checkout URL returned from payment server.');
             }
         } catch (err) {
-            showNotification('orders-feedback', `❌ Payment Error: ${err.message}`, 'error');
+            showNotification('orders-feedback', `Payment Error: ${err.message}`, 'error');
             if (btn) { btn.disabled = false; btn.textContent = 'Pay Now'; }
         }
     };
@@ -604,7 +609,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error(friendlyMsg);
             }
 
-            showNotification('admin-message', `✅ Event ${action}d successfully.`, 'success');
+            showNotification('admin-message', `Event ${action}d successfully.`, 'success');
             adminForm.reset();
             adminActionSelect.dispatchEvent(new Event('change'));
             
@@ -612,7 +617,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await fetchAndRenderEvents();
 
         } catch (err) {
-            showNotification('admin-message', `❌ Error: ${err.message}`, 'error');
+            showNotification('admin-message', `Error: ${err.message}`, 'error');
         } finally {
             setLoading(submitBtn, false, 'Execute Action');
         }

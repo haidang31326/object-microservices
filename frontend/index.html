@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EventTick | Premium Event Ticketing</title>
-    <meta name="description" content="EventTick — Dynamic, microservices-driven event ticketing platform. inspired by Ticketbox.">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>EventTick Pro — Premium Microservices Ticketing Platform</title>
+    <meta name="description" content="EventTick Pro — High-concurrency, microservices-driven event ticketing platform with real-time stock management and instant checkout.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,23 +17,39 @@
          ======================================================================== -->
     <header class="navbar">
         <div class="nav-container">
-            <a href="#" class="logo">Event<span>Tick</span></a>
+            <a href="#" class="logo">
+                <span class="logo-mark">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"></path>
+                        <line x1="13" y1="5" x2="13" y2="19" stroke-dasharray="2 2"></line>
+                    </svg>
+                </span>
+                Event<span class="logo-accent">Tick</span>
+            </a>
             
             <div class="nav-search">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="search-input" placeholder="Search events by name...">
+                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="search-input" placeholder="Search events, concerts, venues...">
             </div>
 
             <nav class="nav-links">
                 <button class="nav-btn active" data-target="explore-section" id="btn-nav-explore">Explore</button>
                 <button class="nav-btn" data-target="orders-section" id="btn-nav-orders" style="display: none;">My Orders</button>
-                <button class="nav-btn admin-link" data-target="admin-section" id="btn-nav-admin" style="display: none;">Admin Panel</button>
+                <button class="nav-btn admin-link" data-target="admin-section" id="btn-nav-admin" style="display: none;">Admin Console</button>
             </nav>
 
             <div class="auth-section">
                 <button id="btn-login" class="btn-login">Login / Register</button>
                 <div id="user-info" class="user-profile hidden">
-                    <span class="user-avatar">👤</span>
+                    <div class="user-avatar-badge">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
                     <span id="user-name" class="user-name">Guest</span>
                     <button id="btn-logout" class="btn-logout">Logout</button>
                 </div>
@@ -45,35 +63,54 @@
     <main class="main-content">
 
         <!-- ====================================================================
-             SECTION: EXPLORE (HERO + GRID)
+             SECTION: EXPLORE (HERO + CATEGORIES + GRID)
              ==================================================================== -->
         <section id="explore-section" class="tab-content active">
             <!-- Hero Promo Banner -->
             <div class="hero-banner">
-                <div class="hero-overlay"></div>
+                <div class="hero-glow"></div>
                 <div class="hero-content">
-                    <span class="hero-tag">HOT EVENT</span>
-                    <h1>Vietnam Rock Fest 2025</h1>
-                    <p class="hero-desc">Bùng nổ cùng những giai điệu rực cháy tại Sân vận động Quốc gia Mỹ Đình. Đặt vé ngay hôm nay để nhận ưu đãi đặc biệt!</p>
-                    <div class="hero-meta">
-                        <span>📍 Mỹ Đình National Stadium</span>
-                        <span>💵 Chỉ từ 350.000 ₫</span>
+                    <div class="hero-badge">
+                        <span class="pulse-dot"></span>
+                        HOT FEATURED EVENT
                     </div>
-                    <button class="btn-hero-book" onclick="quickBookFeatured(1)">Book Tickets Now</button>
+                    <h1>Vietnam Rock Fest 2026</h1>
+                    <p class="hero-desc">Experience an electrifying night of rock anthems at Mỹ Đình National Stadium. Powered by high-concurrency Microservices architecture for instant 1-click reservations.</p>
+                    <div class="hero-meta">
+                        <span class="meta-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                            Mỹ Đình National Stadium
+                        </span>
+                        <span class="meta-item price-tag">
+                            From 350.000 ₫
+                        </span>
+                    </div>
+                    <button class="btn-hero-book" onclick="quickBookFeatured(1)">
+                        <span>Book Tickets Now</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
                 </div>
             </div>
 
-            <!-- Event Listing Grid -->
+            <!-- Event Listing Header & Category Pills -->
             <div class="section-header">
-                <h2>Featured Events</h2>
-                <p>Discover and book tickets for the hottest music, stage, and sports events.</p>
+                <div>
+                    <h2>Live Events & Experiences</h2>
+                    <p>Discover available events with real-time inventory tracking and instant Stripe checkout.</p>
+                </div>
+                <div class="category-pills">
+                    <button class="pill-btn active">All Events</button>
+                    <button class="pill-btn">Concerts</button>
+                    <button class="pill-btn">Stage & Theater</button>
+                    <button class="pill-btn">Sports</button>
+                </div>
             </div>
 
             <div id="events-grid" class="events-grid">
-                <!-- Dynamically rendered event cards will be appended here -->
+                <!-- Dynamically rendered event cards -->
                 <div class="loading-state">
                     <div class="spinner"></div>
-                    <p>Loading events...</p>
+                    <p>Connecting to Gateway & Loading Events...</p>
                 </div>
             </div>
         </section>
@@ -83,8 +120,10 @@
              ==================================================================== -->
         <section id="orders-section" class="tab-content hidden container-card">
             <div class="orders-header">
-                <h2>My Booked Orders</h2>
-                <p>Manage your orders, view totals, or cancel bookings.</p>
+                <div>
+                    <h2>My Booked Orders</h2>
+                    <p>Track your ticket purchases, view payment statuses, or cancel reservations.</p>
+                </div>
             </div>
             
             <div id="orders-feedback" class="message hidden"></div>
@@ -98,7 +137,6 @@
             </div>
 
             <div id="orders-list" class="orders-list">
-                <!-- Order cards will be rendered here -->
                 <p class="empty-state">Click "Fetch Orders" to view your purchase history.</p>
             </div>
         </section>
@@ -108,8 +146,10 @@
              ==================================================================== -->
         <section id="admin-section" class="tab-content hidden container-card">
             <div class="admin-header">
-                <h2>Event Management <span class="admin-badge">ADMIN</span></h2>
-                <p>Add new events, adjust capacities, or delete existing events.</p>
+                <div>
+                    <h2>Event Management Console <span class="admin-badge">ADMIN ROLE</span></h2>
+                    <p>Create new events, adjust total capacity, or delete existing shows.</p>
+                </div>
             </div>
 
             <div class="admin-controls">
@@ -133,7 +173,7 @@
                     </div>
                     <div class="form-group name-group">
                         <label for="admin-event-name">Event Title</label>
-                        <input type="text" id="admin-event-name" placeholder="e.g. Live Concert 2026">
+                        <input type="text" id="admin-event-name" placeholder="e.g. Son Tung M-TP Concert 2026">
                     </div>
                     <div class="form-grid">
                         <div class="form-group capacity-group">
@@ -164,11 +204,13 @@
     <div id="booking-modal" class="modal hidden">
         <div class="modal-overlay" onclick="closeModal()"></div>
         <div class="modal-card">
-            <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+            <button class="modal-close-btn" onclick="closeModal()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
             <div class="modal-header">
-                <span class="modal-tag">TICKET RESERVATION</span>
+                <span class="modal-tag">RESERVATION CHECKOUT</span>
                 <h3 id="modal-event-title">Event Title</h3>
-                <p id="modal-event-venue">📍 Venue Location</p>
+                <p id="modal-event-venue">Venue Location</p>
             </div>
             
             <div class="modal-body">
@@ -177,7 +219,7 @@
                     <strong id="modal-ticket-price" class="text-primary">0 ₫</strong>
                 </div>
                 <div class="modal-info-row">
-                    <span>Available Capacity</span>
+                    <span>Available Stock</span>
                     <span id="modal-event-left" class="highlight-text">0 seats</span>
                 </div>
                 
@@ -194,9 +236,13 @@
                     <div class="form-group">
                         <label for="ticket-count">Number of Tickets</label>
                         <div class="quantity-selector">
-                            <button type="button" class="qty-btn" onclick="adjustQty(-1)">-</button>
+                            <button type="button" class="qty-btn" onclick="adjustQty(-1)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
                             <input type="number" id="ticket-count" value="1" min="1" max="10" readonly>
-                            <button type="button" class="qty-btn" onclick="adjustQty(1)">+</button>
+                            <button type="button" class="qty-btn" onclick="adjustQty(1)">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </button>
                         </div>
                     </div>
 
@@ -205,7 +251,7 @@
                         <strong id="booking-total-price">0 ₫</strong>
                     </div>
 
-                    <button type="submit" class="btn-booking-submit" id="btn-book">Confirm Purchase</button>
+                    <button type="submit" class="btn-booking-submit" id="btn-book">Confirm & Proceed to Checkout</button>
                 </form>
                 
                 <div id="booking-message" class="message hidden"></div>
@@ -214,13 +260,16 @@
     </div>
 
     <!-- ========================================================================
-         COLLAPSIBLE DEVELOPER / TESTER DRAWER
+         DEVELOPER & TESTER HELPER DRAWER
          ======================================================================== -->
     <div id="dev-drawer" class="dev-drawer collapsed">
         <div class="dev-drawer-header" onclick="toggleDevDrawer()">
             <div class="dev-header-title">
-                <span class="dev-gear-icon">⚙️</span>
-                <strong>Tester Helper Console</strong>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <strong>Developer Console & Infrastructure</strong>
             </div>
             <span class="dev-toggle-icon">▲</span>
         </div>
@@ -229,25 +278,25 @@
             <div class="dev-grid">
                 <!-- Credentials Card -->
                 <div class="dev-card">
-                    <h4>Demo Accounts</h4>
+                    <h4>Demo Keycloak Accounts</h4>
                     <ul>
-                        <li><strong>Customer Account:</strong><br>demo@eventtick.io / Demo@1234<br><em>Use Customer ID: 3</em></li>
-                        <li><strong>Admin Account:</strong><br>admin@eventtick.io / Admin@1234<br><em>Unlocks Admin tab</em></li>
+                        <li><strong>Customer Account:</strong><br>demo@eventtick.io / Demo@1234<br><em>Customer ID: 3</em></li>
+                        <li><strong>Admin Account:</strong><br>admin@eventtick.io / Admin@1234<br><em>Unlocks Admin Console</em></li>
                     </ul>
                 </div>
                 <!-- Links Card -->
                 <div class="dev-card">
-                    <h4>Infrastructure Logs / Console</h4>
+                    <h4>Infrastructure UIs</h4>
                     <ul>
-                        <li><a href="http://localhost:8084" target="_blank">📬 Kafka Message UI (Port 8084)</a></li>
-                        <li><a href="http://localhost:8091" target="_blank">🔑 Keycloak IAM Admin Console (Port 8091)</a></li>
-                        <li><a href="http://localhost:8090/swagger-ui.html" target="_blank">📖 Swagger API Docs (Port 8090)</a></li>
+                        <li><a href="http://localhost:8084" target="_blank">Kafka UI Console (Port 8084)</a></li>
+                        <li><a href="http://localhost:8091" target="_blank">Keycloak IAM Admin (Port 8091)</a></li>
+                        <li><a href="http://localhost:8090/swagger-ui.html" target="_blank">Swagger API Gateway Docs (Port 8090)</a></li>
                     </ul>
                 </div>
                 <!-- Controls Card -->
                 <div class="dev-card">
                     <h4>Simulation Helper</h4>
-                    <p>Toggle credentials or force set active Customer ID for testing API Gateway role propagation.</p>
+                    <p>Override active Customer ID for API Gateway role propagation testing.</p>
                     <div class="form-group">
                         <label for="dev-customer-override">Override Customer ID</label>
                         <select id="dev-customer-override" onchange="overrideCustomerID(this.value)">
@@ -263,7 +312,11 @@
 
     <!-- Floating Toggle Button for Drawer -->
     <button class="dev-floating-trigger" id="btn-dev-trigger" onclick="toggleDevDrawer()">
-        ⚙️ Developer Panel
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Developer Console</span>
     </button>
 
     <!-- Keycloak JS SDK -->
