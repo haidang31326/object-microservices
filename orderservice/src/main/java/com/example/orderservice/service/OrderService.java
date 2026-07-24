@@ -28,13 +28,21 @@ public class OrderService {
 
     @KafkaListener(topics = "booking", groupId = "order-service")
     public void orderEvent(BookingEvent bookingevent) {
+        log.info("Received Order Event: {}", bookingevent);
 
-    log.info("Received Order Event: {}", bookingevent);
+        // Idempotent Consumer Pattern: Ignore duplicate event processing
+        boolean isDuplicate = orderRepository.existsByCustomerIdAndEventIdAndStatus(
+                bookingevent.getUserId(), bookingevent.getEventId(), "PENDING");
+        if (isDuplicate) {
+            log.warn("Idempotent Consumer: Duplicate BookingEvent detected for userId {} and eventId {}. Skipping duplicate order!",
+                    bookingevent.getUserId(), bookingevent.getEventId());
+            return;
+        }
 
-    Order order =createOrder(bookingevent);
-    orderRepository.saveAndFlush(order);
-    inventoryServiceClient.updateEventCapacity(bookingevent.getEventId(), bookingevent.getTicketCount());
-    log.info("Inventory updated for eventId {} after booking {} tickets", order.getEventId(), order.getTicketCount());
+        Order order = createOrder(bookingevent);
+        orderRepository.saveAndFlush(order);
+        inventoryServiceClient.updateEventCapacity(bookingevent.getEventId(), bookingevent.getTicketCount());
+        log.info("Inventory updated for eventId {} after booking {} tickets", order.getEventId(), order.getTicketCount());
     }
 
     public Order createOrder(BookingEvent bookingevent) {
